@@ -22,6 +22,12 @@ const routes = [
         component: () => import('../views/FundList.vue'),
         meta: { requiresAuth: true } // 【新增】标记这个页面需要登录
       },
+      {
+        path: 'funds/:fundCode', // ":fundCode" 是一个动态路径参数
+        name: 'FundDetail',
+        component: () => import('../views/FundDetail.vue'),
+        meta: { requiresAuth: true }
+      },
       // ... 其他需要登录才能访问的页面，都在children里配置，并加上 meta: { requiresAuth: true }
     ]
   },
@@ -35,6 +41,7 @@ const routes = [
     name: 'UserRegister',
     component: () => import('../views/UserRegister.vue')
   }
+
 ]
 
 const router = new VueRouter({

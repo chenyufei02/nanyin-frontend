@@ -16,27 +16,15 @@ export function searchFunds(params) {
 }
 
 /**
- * 根据基金代码获取基金详细信息
- * 对应后端的 FundInfoController -> getFundInfo
+ * 【核心修正】为基金详情页提供API函数
+ * 对应后端的 FundInfoController -> getFundDetail
  * @param {string} fundCode - 基金代码
  * @returns Promise
  */
-export function getFundInfoByCode(fundCode) {
+export function getFundDetail(fundCode) {
   return request({
-    // 使用 ES6 的模板字符串拼接URL
-    url: `/fund-info/${fundCode}`,
+    url: `/fund-info/detail/${fundCode}`,
     method: 'get'
   });
 }
 
-/**
- * 【后台管理功能】手动触发从外部数据源导入所有基金
- * 对应后端的 FundInfoController -> importAllFunds
- * @returns Promise
- */
-export function importAllFunds() {
-    return request({
-        url: '/fund-info/import-all',
-        method: 'post'
-    });
-}
