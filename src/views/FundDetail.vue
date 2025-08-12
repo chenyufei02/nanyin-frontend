@@ -49,7 +49,7 @@
 
 <script>
 // 1. 导入我们封装好的“获取基金详情”的API函数
-import { getFundDetail } from '@/api/fund.js';
+import {getFundDetail} from '@/api/fund.js';
 import moment from 'moment'; // 引入一个强大的日期格式化库
 
 export default {
@@ -127,8 +127,7 @@ export default {
       this.loading = true;
       try {
         // a. 调用API函数，并传入从URL中获取的fundCode
-        const responseData = await getFundDetail(this.fundCode);
-        this.fundData = responseData;
+        this.fundData = await getFundDetail(this.fundCode);
       } catch (error) {
         console.error("获取基金详情失败:", error);
         this.fundData = null; // 加载失败时清空数据
