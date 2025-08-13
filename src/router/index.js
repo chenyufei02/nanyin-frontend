@@ -17,6 +17,19 @@ const routes = [
         meta: { requiresAuth: true } // 【新增】标记这个页面需要登录
       },
       {
+        path: 'my-holdings',
+        name: 'UserHolding',
+        component: () => import('../views/UserHolding.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'my-transactions',
+        name: 'UserTransaction',
+        component: () => import('../views/UserTransaction.vue'),
+
+      meta: { requiresAuth: true }
+},
+      {
         path: 'funds',
         name: 'FundList',
         component: () => import('../views/FundList.vue'),
