@@ -171,6 +171,18 @@ export default {
   border-radius: 4px;
   text-align: center;
 }
+/* 【新增】让顶部区域的列等高对齐 */
+.top-section {
+  display: flex;
+  align-items: stretch; /* 关键属性：让所有子元素（列）撑满容器高度 */
+}
+.top-section .el-col {
+  display: flex; /* 让列也成为flex容器，以便卡片能撑满 */
+}
+
+.top-section .box-card {
+  width: 100%; /* 让卡片撑满列的宽度 */
+}
 .stat-label { color: #909399; margin-bottom: 10px; }
 .stat-value { font-size: 24px; font-weight: bold; }
 .is-up { color: #f56c6c; }

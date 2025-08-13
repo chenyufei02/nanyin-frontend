@@ -40,6 +40,13 @@ const routes = [
         component: () => import('../views/UserHolding.vue'),
         meta: { requiresAuth: true }
       },
+      {
+        path: 'my-profile', // 定义页面的访问路径
+        name: 'UserProfile',
+        component: () => import('../views/UserProfile.vue'),
+        meta: { requiresAuth: true } // 标记这个页面需要登录
+      },
+
       // ... 其他需要登录才能访问的页面，都在children里配置，并加上 meta: { requiresAuth: true }
     ]
   },
