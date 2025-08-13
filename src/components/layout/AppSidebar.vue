@@ -56,35 +56,44 @@ export default {
 <style scoped>
 .sidebar {
   position: fixed;
-  top: 60px; /* 从顶部导航栏下方开始 */
+  top: 60px;
   left: 0;
   bottom: 0;
   width: 240px;
   background-color: #343a40;
-  overflow-y: auto; /* 如果菜单项过多，允许滚动 */
+  overflow-y: auto;
 }
+
 .sidebar-menu {
-  border-right: none; /* 移除Element UI默认的右边框 */
+  border-right: none;
   height: 100%;
+  padding-top: 10px;
 }
 
 /* --- 【核心修改】 --- */
 
-/* 1. 设置菜单项的Flex布局，实现内部元素水平居中 */
-.menu-item-content {
-  display: flex;
-  align-items: center; /* 垂直居中（如果需要）*/
-  width: 100%;
-  padding-left: 20px; /* 统一的左内边距 */
+/* 覆盖Element UI默认样式，为每个菜单项增加上下内边距 */
+.sidebar-menu >>> .el-menu-item {
+  padding-top: 15px !important;
+  padding-bottom: 15px !important;
+  height: auto;
+  line-height: normal;
 }
 
-/* 2. 调整图标和文字的样式 */
+
+.menu-item-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding-left: 20px;
+}
+
 .menu-item-content i {
-  margin-right: 10px; /* 图标和文字之间的间距 */
-  font-size: 24px;    /* 稍微增大图标 */
+  margin-right: 10px;
+  font-size: 20px;
 }
 
 .menu-item-content span {
-  font-size: 20px;    /* 【核心修改】增大文字大小 */
+  font-size: 20px;
 }
 </style>
