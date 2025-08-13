@@ -12,6 +12,12 @@
         </div>
       </div>
 
+      <el-row class="fund-actions" type="flex" justify="end">
+        <el-col :span="8" :offset="16" style="text-align: right;">
+          <el-button type="primary" @click="goToPurchase">购买</el-button>
+        </el-col>
+      </el-row>
+
       <el-row :gutter="20" class="fund-stats">
         <el-col :span="8">
           <div class="stat-item">
@@ -134,6 +140,10 @@ export default {
       } finally {
         this.loading = false;
       }
+    },
+    goToPurchase() {
+      if (!this.fundCode) return;
+      this.$router.push(`/funds/${this.fundCode}/purchase`);
     }
   }
 };
@@ -142,6 +152,9 @@ export default {
 <style scoped>
 .fund-detail-container {
   padding: 20px;
+}
+.fund-actions {
+  margin-bottom: 10px;
 }
 .fund-card .card-title {
   display: flex;
