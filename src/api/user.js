@@ -15,6 +15,7 @@ export function getMyProfile() {
 }
 
 /**
+ * 【【【 核心修正：补上这个缺失的函数！！！ 】】】
  * 更新当前登录用户的个人资料
  * 对应后端的 UserProfileController -> updateUserProfile
  * @param {object} data - 包含待更新字段的UserProfileUpdateDTO对象
@@ -27,6 +28,7 @@ export function updateMyProfile(data) {
     data: data
   });
 }
+
 
 /**
  * 获取当前登录用户的主页仪表盘所有数据 (聚合接口)
