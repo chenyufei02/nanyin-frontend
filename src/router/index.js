@@ -28,6 +28,12 @@ const routes = [
         component: () => import('../views/FundDetail.vue'),
         meta: { requiresAuth: true }
       },
+      {
+        path: 'my-holdings',
+        name: 'UserHolding',
+        component: () => import('../views/UserHolding.vue'),
+        meta: { requiresAuth: true }
+      },
       // ... 其他需要登录才能访问的页面，都在children里配置，并加上 meta: { requiresAuth: true }
     ]
   },
