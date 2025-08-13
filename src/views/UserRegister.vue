@@ -111,7 +111,8 @@ export default {
           }, 1500);
 
         } catch (error) {
-          // d. 注册失败（例如用户名已存在），错误信息已在axios拦截器中处理
+          // 使用Element UI的Message组件，弹出后端返回的具体错误信息
+          this.$message.error(error.message || '注册失败，请稍后重试');
           console.error('注册失败:', error);
         } finally {
           this.loading = false;

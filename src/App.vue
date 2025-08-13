@@ -5,9 +5,16 @@
 </template>
 
 <style>
-/* 在这里可以放一些全局的CSS样式 */
+/* 【核心修改】在这里添加全局CSS样式 */
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 优化Element UI组件的全局间距和对齐 */
+.el-card__header {
+  font-weight: bold;
 }
 </style>
