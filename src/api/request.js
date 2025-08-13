@@ -7,7 +7,7 @@ const service = axios.create({
   baseURL: 'http://localhost:8080/api',
 
   // 设置请求超时时间，单位是毫秒
-  timeout: 15000
+  timeout: 150000
 });
 
 // 2. 添加请求拦截器 (可选，但推荐)

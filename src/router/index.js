@@ -28,8 +28,16 @@ const routes = [
         component: () => import('../views/FundDetail.vue'),
         meta: { requiresAuth: true }
       },
+      {
+        path: 'dashboard', // 注意：因为是子路由，path前面没有'/'
+        name: 'Dashboard',
+        component: () => import('../views/UserDashboard.vue'), // 确保文件名正确
+        meta: { requiresAuth: true }
+      },
       // ... 其他需要登录才能访问的页面，都在children里配置，并加上 meta: { requiresAuth: true }
     ]
+
+
   },
   {
     path: '/login',
