@@ -128,7 +128,7 @@ export default {
     this.fetchFundDetails();
   },
   methods: {
-    // 4. 核心方法：调用API获取数据
+    // 4. 核心方法：调用API获取数据111
     async fetchFundDetails() {
       this.loading = true;
       try {
