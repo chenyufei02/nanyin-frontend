@@ -79,24 +79,31 @@ export default {
 
         try {
           // b. 调用我们封装好的API函数，并传入表单数据
+          //    axios响应拦截器会处理外层 ApiResponseVO，这里直接拿到data部分
           const responseData = await login(this.loginForm);
 
-          // c. 【核心】登录成功后，后端会返回包含token的对象
-          // 我们将 token 存入浏览器的 localStorage，以便后续所有请求都能携带它
-          localStorage.setItem('authToken', responseData.token);
+          // c. 【核心优化】从响应数据中，精确地提取accessToken
+          if (responseData && responseData.accessToken) {
+              // d. 将 "Bearer " 前缀和纯净的Token拼接后，存入本地存储
+              localStorage.setItem('authToken', 'Bearer ' + responseData.accessToken);
 
-          // d. 弹出成功提示
-          this.$message.success('登录成功！');
+              // e. 弹出成功提示
+              this.$message.success('登录成功！');
 
-          // e. 跳转到“我的主页” (dashboard)
-          this.$router.push('/dashboard');
+              // f. 跳转到“我的主页” (dashboard)
+              this.$router.push('/dashboard');
+          } else {
+              // g. 如果后端返回的数据结构不符合预期，给出一个明确的错误
+              throw new Error('从后端返回的Token格式不正确');
+          }
 
         } catch (error) {
-          // f. 如果API调用失败（例如密码错误），在请求拦截器中已经处理了错误提示
-          // 我们只需要在控制台打印错误即可
+          // h. 【核心优化】如果API调用失败（例如密码错误），
+          //     将后端返回的具体错误信息，通过Element UI的Message组件弹给用户
+          this.$message.error(error.message || '登录失败，请稍后重试');
           console.error('登录失败:', error);
         } finally {
-          // g. 无论成功还是失败，最后都结束加载状态
+          // i. 无论成功还是失败，最后都结束加载状态
           this.loading = false;
         }
       });

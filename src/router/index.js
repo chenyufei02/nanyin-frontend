@@ -29,6 +29,12 @@ const routes = [
         meta: { requiresAuth: true }
       },
       {
+        path: 'dashboard', // 注意：因为是子路由，path前面没有'/'
+        name: 'Dashboard',
+        component: () => import('../views/UserDashboard.vue'), // 确保文件名正确
+        meta: { requiresAuth: true }
+      },
+      {
         path: 'my-holdings',
         name: 'UserHolding',
         component: () => import('../views/UserHolding.vue'),
