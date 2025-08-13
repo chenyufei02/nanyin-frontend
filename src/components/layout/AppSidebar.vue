@@ -36,13 +36,6 @@
         </div>
       </el-menu-item>
 
-       <el-menu-item index="/my-profile">
-        <div class="menu-item-content">
-          <i class="el-icon-user"></i>
-          <span>个人资料</span>
-        </div>
-      </el-menu-item>
-
     </el-menu>
   </div>
 </template>
