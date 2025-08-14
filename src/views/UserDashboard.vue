@@ -4,27 +4,62 @@
       <h2 class="page-title">我的主页</h2>
 
       <el-row :gutter="20" class="top-section">
-        <el-col :span="16">
-          <el-card class="box-card" v-if="dashboardData.userProfile">
-            <div slot="header"><span><i class="el-icon-user-solid"></i> 基础信息</span></div>
-            <div class="user-profile-body">
-               <p><strong>欢迎您，{{ dashboardData.userProfile.name || '新用户' }}</strong></p>
-               <p>我们为您生成了以下的投资画像标签：</p>
-               <el-tag type="success" style="margin-right: 5px;">稳健型投资者</el-tag>
-               <el-tag type="warning" style="margin-right: 5px;">长期持有</el-tag>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="8">
-           <el-card class="box-card ai-card">
-             <div slot="header"><span><i class="el-icon-magic-stick"></i> AI投资助手</span></div>
-             <div class="ai-card-body">
-                <p>获取一份为您量身定制的投资分析与建议报告。</p>
-                <el-button type="primary" @click="fetchAISuggestion" :loading="aiLoading">立即生成</el-button>
-             </div>
-           </el-card>
-        </el-col>
-      </el-row>
+              <el-col :span="16">
+                      <el-card class="box-card user-profile-card" v-if="dashboardData.userProfile">
+                        <div slot="header" class="clearfix">
+                          <span><i class="el-icon-user-solid"></i> 基础信息</span>
+                        </div>
+                        <div class="user-profile-body">
+                          <div class="profile-header">
+                            <p class="welcome-text">
+                              <strong>欢迎您，{{ dashboardData.userProfile.name || '新用户' }}</strong>
+                            </p>
+                            <div class="tags-container">
+                              <el-tag type="success" style="margin-right: 5px;">稳健型投资者</el-tag>
+                              <el-tag type="warning">长期持有</el-tag>
+                            </div>
+                          </div>
+
+                          <el-descriptions class="margin-top" :column="2" border>
+                            <el-descriptions-item>
+                              <template slot="label"><i class="el-icon-male"></i><i class="el-icon-female"></i> 性别</template>
+                              {{ dashboardData.userProfile.gender }}
+                            </el-descriptions-item>
+                            <el-descriptions-item>
+                              <template slot="label"><i class="el-icon-date"></i> 年龄</template>
+                              {{ userAge }}
+                            </el-descriptions-item>
+                            <el-descriptions-item>
+                              <template slot="label"><i class="el-icon-briefcase"></i> 职业</template>
+                              <el-tag size="small">{{ dashboardData.userProfile.occupation }}</el-tag>
+                            </el-descriptions-item>
+                            <el-descriptions-item>
+                              <template slot="label"><i class="el-icon-postcard"></i> 证件类型</template>
+                              {{ dashboardData.userProfile.idType }}
+                            </el-descriptions-item>
+                            <el-descriptions-item>
+                              <template slot="label"><i class="el-icon-bank-card"></i> 证件号码</template>
+                              {{ dashboardData.userProfile.idNumber }}
+                            </el-descriptions-item>
+                            <el-descriptions-item>
+                              <template slot="label"><i class="el-icon-location-outline"></i> 联系地址</template>
+                              {{ dashboardData.userProfile.address }}
+                            </el-descriptions-item>
+                          </el-descriptions>
+                        </div>
+                      </el-card>
+                    </el-col>
+
+              <el-col :span="8">
+                 <el-card class="box-card ai-card">
+                   <div slot="header"><span><i class="el-icon-magic-stick"></i> AI投资助手</span></div>
+                   <div class="ai-card-body">
+                      <p>获取一份为您量身定制的投资分析与建议报告。</p>
+                      <el-button type="primary" @click="fetchAISuggestion" :loading="aiLoading">立即生成</el-button>
+                   </div>
+                 </el-card>
+              </el-col>
+            </el-row>
 
       <el-row :gutter="20" class="stats-section">
         <el-col :span="5"><div class="stat-card"><div class="stat-label">可用余额</div><div class="stat-value">{{ formatCurrency(dashboardData.balance) }}</div></div></el-col>
@@ -94,6 +129,7 @@
 // 导入所有需要的API函数和库
 import { getMyDashboard, getAISuggestion, updateMyProfile } from '@/api/user.js';
 import * as echarts from 'echarts';
+import moment from "moment";
 
 export default {
   name: 'UserDashboard',
@@ -130,6 +166,19 @@ export default {
         });
       }
     }
+  },
+
+  computed: {
+    // --- 【【【 新增这个计算属性 】】】 ---
+    userAge() {
+      if (this.dashboardData && this.dashboardData.userProfile && this.dashboardData.userProfile.birthDate) {
+        // 使用 moment.js 根据出生日期计算当前年龄
+        return moment().diff(this.dashboardData.userProfile.birthDate, 'years');
+      }
+      return '未知';
+    },
+
+    // ... (其他所有 computed 属性如 formatCurrency 等保持不变) ...
   },
 
   created() {
@@ -329,29 +378,52 @@ export default {
 .box-card {
   margin-bottom: 20px;
 }
+
+/* --- 【【【 核心修正 】】】 --- */
+
+/* 1. 顶部卡片行 Flex 布局，并拉伸等高 */
 .top-section {
   display: flex;
-  align-items: stretch; /* 让列等高 */
+  align-items: stretch;
 }
 .top-section .el-col {
-  display: flex; /* 让列成为flex容器，以便卡片能撑满 */
+  display: flex;
 }
 .top-section .el-card {
-  width: 100%; /* 让卡片撑满列的宽度 */
+  width: 100%;
   display: flex;
   flex-direction: column;
 }
 .top-section .el-card >>> .el-card__body {
-    flex-grow: 1; /* 让卡片内容区自动成长，填满剩余空间 */
+  flex-grow: 1;
 }
+
+/* 2. 【新增】基础信息卡片顶部的 header 样式 */
+.profile-header {
+  display: flex;
+  justify-content: space-between; /* 两端对齐 */
+  align-items: center; /* 垂直居中 */
+  margin-bottom: 15px; /* 与下方描述列表的间距 */
+}
+.profile-header .welcome-text {
+  margin: 0; /* 移除 p 标签默认的上下边距 */
+  font-size: 1.1rem; /* 稍微调整字体大小 */
+}
+.tags-container {
+  flex-shrink: 0; /* 防止标签被压缩 */
+}
+
+/* 3. AI卡片内容垂直居中 */
 .ai-card-body {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  flex-grow: 1;
+  height: 100%;
 }
+
+/* --- 其他样式保持不变 --- */
 .stats-section {
   margin-bottom: 20px;
 }
@@ -379,23 +451,6 @@ export default {
 .chart {
   height: 300px;
   width: 100%;
-}
-.holdings-section .el-table {
-  margin-top: 0;
-}
-.empty-text {
-  text-align: center;
-  color: #909399;
-  padding: 20px;
-}
-.no-stats-alert {
-  height: 100%;
-}
-.balance-text {
-  font-weight: bold;
-  color: #E6A23C;
-  font-size: 1.2rem;
-  line-height: 40px;
 }
 .profile-section .el-form-item__content span {
   color: #606266;

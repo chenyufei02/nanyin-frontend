@@ -24,7 +24,7 @@
           <el-input :value="formattedBalance" disabled></el-input>
         </el-form-item>
         <el-form-item label="交易金额(元)" prop="amount">
-          <el-input v-model.number="form.amount" placeholder="请输入购买金额" type="number" min="0"></el-input>
+          <el-input v-model="form.amount" placeholder="请输入购买金额"></el-input>
         </el-form-item>
         <el-form-item label="成交单位净值">
           <el-input :value="latestNetValue" disabled></el-input>
@@ -49,6 +49,38 @@ import { purchaseFund, getMyProfile } from '@/api/user.js';
 export default {
   name: 'FundPurchase',
   data() {
+    // 【优化】为“金额”字段创建一个更健壮的自定义校验器
+    const validateAmount = (rule, value, callback) => {
+      if (value == null || String(value).trim() === '') {
+        return callback(new Error('请输入购买金额'));
+      }
+      if (!/^\d+(\.\d{1,2})?$/.test(value)) {
+        return callback(new Error('请输入有效的金额格式，最多两位小数'));
+      }
+      const numericValue = parseFloat(value);
+      if (numericValue <= 0) {
+        return callback(new Error('购买金额必须大于0'));
+      }
+      if (numericValue > this.balance) {
+        return callback(new Error('账户可用余额不足'));
+      }
+      callback();
+    };
+
+    // 【保留】为“银行卡号”字段创建一个Luhn算法校验器
+    const validateBankCard = (rule, value, callback) => {
+      if (!value) {
+        return callback(new Error('请输入银行卡号'));
+      }
+      if (!/^\d{10,19}$/.test(value)) {
+        return callback(new Error('银行卡号需为10-19位数字'));
+      }
+      if (!this.luhnCheck(value)) {
+        return callback(new Error('银行卡号不合法，请检查后重试'));
+      }
+      callback();
+    };
+
     return {
       loading: true,
       submitting: false,
@@ -59,46 +91,16 @@ export default {
         fundCode: '',
         fundName: '',
         bankCardNo: '',
-        amount: null
+        amount: '' // 保持为空字符串
       },
       rules: {
         bankCardNo: [
-          { required: true, message: '请输入银行卡号', trigger: 'blur' },
-          { pattern: /^\d{10,19}$/, message: '银行卡号需为10-19位数字', trigger: 'blur' },
-          { validator: (rule, value, callback) => {
-              if (!value) {
-                callback(new Error('请输入银行卡号'));
-                return;
-              }
-              if (!/^\d{10,19}$/.test(value)) {
-                callback(new Error('银行卡号需为10-19位数字'));
-                return;
-              }
-              if (!this.luhnCheck(value)) {
-                callback(new Error('银行卡号不合法，请检查后重试'));
-                return;
-              }
-              callback();
-            }, trigger: 'blur' }
+          // 【保留】银行卡号的验证规则
+          { required: true, validator: validateBankCard, trigger: 'blur' }
         ],
         amount: [
-          { required: true, message: '请输入购买金额', trigger: 'blur' },
-          { type: 'number', message: '金额必须是数字', trigger: 'blur' },
-          { validator: (rule, value, callback) => {
-              if (value == null || value === '') {
-                callback();
-                return;
-              }
-              if (value <= 0) {
-                callback(new Error('金额必须大于0'));
-                return;
-              }
-              if (Number(value) > Number(this.balance || 0)) {
-                callback(new Error('金额不足'));
-                return;
-              }
-              callback();
-            }, trigger: 'change' }
+          // 【核心修正】使用我们自定义的强大校验器
+          { required: true, validator: validateAmount, trigger: 'blur' }
         ]
       }
     };
@@ -117,14 +119,13 @@ export default {
     this.init(fundCode);
   },
   methods: {
+    // 【保留】银行卡输入处理函数
     onBankCardInput(value) {
-      // 仅保留数字
       const digitsOnly = String(value || '').replace(/\D+/g, '');
-      // 限制最长19位
       this.form.bankCardNo = digitsOnly.slice(0, 19);
     },
+    // 【保留】Luhn校验算法
     luhnCheck(numberString) {
-      // Luhn 校验算法
       const digits = (numberString || '').split('').reverse().map(d => parseInt(d, 10));
       let sum = 0;
       for (let i = 0; i < digits.length; i++) {
@@ -159,18 +160,6 @@ export default {
         this.balance = 0;
       }
     },
-    // 将日期格式化为后端要求的本地时间格式：YYYY-MM-DDTHH:mm:ss（不带Z）
-    formatDateTimeLocal(date) {
-      const d = date instanceof Date ? date : new Date(date);
-      const pad = n => String(n).padStart(2, '0');
-      const yyyy = d.getFullYear();
-      const MM = pad(d.getMonth() + 1);
-      const dd = pad(d.getDate());
-      const HH = pad(d.getHours());
-      const mm = pad(d.getMinutes());
-      const ss = pad(d.getSeconds());
-      return `${yyyy}-${MM}-${dd}T${HH}:${mm}:${ss}`;
-    },
     goBack() {
       const fundCode = this.form.fundCode;
       this.$router.push(`/funds/${fundCode}`);
@@ -178,37 +167,26 @@ export default {
     handleSubmit() {
       this.$refs.purchaseForm.validate(async valid => {
         if (!valid) return;
-        if (this.form.amount > this.balance) {
-          this.$message.error('金额不足');
-          return;
-        }
+
         const payload = {
+          userId: this.userId,
           fundCode: this.form.fundCode,
-          // 兼容后端不同字段命名
-          transactionAmount: Number(this.form.amount),
-          amount: Number(this.form.amount),
-          bankCardNo: this.form.bankCardNo,
-          bank_account_number: this.form.bankCardNo, // 添加数据库字段名
-          unitNetValue: this.fund?.performance?.unitNetValue ?? null,
-          transactionTime: this.formatDateTimeLocal(new Date())
+          transactionAmount: this.form.amount, // 直接传递字符串
+          transactionTime: new Date().toISOString()
         };
+
         this.submitting = true;
         try {
-          const resp = await purchaseFund(payload);
-          // 如果后端返回了新的余额，则直接使用返回值覆盖（兼容多种字段）
-          const possibleBalance = (resp && (
-            resp.availableBalance ?? resp.balance ?? resp.newBalance ??
-            (resp.data ? (resp.data.availableBalance ?? resp.data.balance ?? resp.data.newBalance) : undefined)
-          ));
-          if (possibleBalance != null) {
-            this.balance = Number(possibleBalance);
-          } else {
-            await this.fetchBalance();
-          }
-          this.$message.success(`购买成功，新的可用余额：${this.formattedBalance} 元`);
-          this.form.amount = null;
+          await purchaseFund(payload);
+          this.$message.success('购买成功！正在跳转到我的持仓...');
+          // 【优化】购买成功后，跳转到持仓页，让用户看到最新资产
+          setTimeout(() => {
+            this.$router.push('/my-holdings');
+          }, 1500);
         } catch (e) {
           this.$message.error(e.message || '购买失败');
+          // 购买失败后，刷新一下余额，以防万一
+          this.fetchBalance();
         } finally {
           this.submitting = false;
         }
