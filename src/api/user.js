@@ -93,12 +93,13 @@ export function redeemFund(data) {
  * 对应后端的 FundTransactionController -> getMyTransactions
  * @returns Promise
  */
-export function getMyTransactions() {
-  return request({
-    url: '/transaction/my-transactions',
-    method: 'get'
-  });
-}
+// 删除这个重复的函数
+// export function getMyTransactions() {
+//   return request({
+//     url: '/transaction/my-transactions',
+//     method: 'get'
+//   });
+// }
 
 /**
  * 根据交易ID获取当前用户的单条交易详情
