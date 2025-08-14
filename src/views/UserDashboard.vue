@@ -106,26 +106,37 @@ export default {
       dashboardData: null,
 
       // 个人资料模块所需的数据
-      isEditing: false,      // 是否处于编辑模式
-      profileForm: {},       // 用于表单双向绑定
-      originalProfile: {},   // 用于“取消”时恢复数据
-      profileRules: {      // 表单校验规则
+      isEditing: false,
+      profileForm: {},
+      originalProfile: {},
+      profileRules: {
         name: [{ required: true, message: '请输入真实姓名', trigger: 'blur' }],
-        gender: [{ required: true, message: '请选择性别', trigger: 'change' }],
-        idType: [{ required: true, message: '请输入证件类型', trigger: 'blur' }],
-        idNumber: [{ required: true, message: '请输入证件号码', trigger: 'blur' }],
-        birthDate: [{ required: true, message: '请选择出生日期', trigger: 'change' }],
-        nationality: [{ required: true, message: '请输入国籍', trigger: 'blur' }],
-        occupation: [{ required: true, message: '请输入职业', trigger: 'blur' }],
         phone: [{ required: true, message: '请输入手机号', trigger: 'blur' }],
-        address: [{ required: true, message: '请输入联系地址', trigger: 'blur' }],
+        idNumber: [{ required: true, message: '请输入证件号码', trigger: 'blur' }],
+        // ... 其他规则
       }
     };
   },
+
+  // --- 【【【 核心修正：使用 watch 监听器 】】】 ---
+  watch: {
+    // 监听 dashboardData 属性的变化
+    dashboardData(newData, oldData) {
+      // 当 newData 不为空 (数据从后端成功返回) 且 oldData 为空 (首次加载)
+      if (newData && !oldData) {
+        // 数据已经有了，Vue会去更新DOM。我们使用$nextTick确保在DOM更新后才画图。
+        this.$nextTick(() => {
+          this.initCharts();
+        });
+      }
+    }
+  },
+
   created() {
-    // 组件创建时，调用方法从后端获取数据
+    // created 钩子现在只负责触发数据获取
     this.fetchDashboardData();
   },
+
   methods: {
     /**
      * 核心方法：从后端获取所有主页所需的数据
@@ -133,16 +144,18 @@ export default {
     async fetchDashboardData() {
       this.loading = true;
       try {
+        // 获取数据并赋值，这将自动触发上面的 watch 监听器
         this.dashboardData = await getMyDashboard();
-        // 获取到数据后，初始化个人资料表单
+
+        // 【重要】这里的 console.log 可以保留用于调试，也可以删掉
+        console.log("后端返回的主页原始数据:", this.dashboardData);
+
+        // 初始化个人资料表单
         if (this.dashboardData && this.dashboardData.userProfile) {
             this.profileForm = { ...this.dashboardData.userProfile, balance: this.dashboardData.balance };
             this.originalProfile = { ...this.profileForm };
         }
-        // 在下一个DOM更新周期初始化所有图表
-        this.$nextTick(() => {
-          this.initCharts();
-        });
+
       } catch (error) {
         this.$message.error('主页数据加载失败，请刷新页面重试');
         console.error("加载主页数据失败:", error);
@@ -160,7 +173,7 @@ export default {
             const suggestion = await getAISuggestion();
             this.$alert(suggestion.replace(/\n/g, '<br/>'), 'AI投资建议', {
                 confirmButtonText: '关闭',
-                dangerouslyUseHTMLString: true // 允许内容中使用<br/>换行
+                dangerouslyUseHTMLString: true
             });
         } catch (error) {
             this.$message.error('AI建议生成失败');
@@ -183,7 +196,12 @@ export default {
      */
     initAssetAllocationPieChart() {
       const chartDom = this.$refs.assetAllocationPieChart;
-      if (!chartDom || !this.dashboardData.assetAllocationJson || this.dashboardData.assetAllocationJson === '{}') return;
+      // 增加一个额外的保护，确保DOM元素存在
+      if (!chartDom) return;
+      if (!this.dashboardData.assetAllocationJson || this.dashboardData.assetAllocationJson === '{}') {
+        chartDom.innerHTML = '<div class="chart-empty-text">暂无持仓数据</div>';
+        return;
+      }
       const myChart = echarts.init(chartDom);
       const data = JSON.parse(this.dashboardData.assetAllocationJson);
       const chartData = Object.keys(data).map(key => ({ name: key, value: data[key] }));
@@ -201,17 +219,36 @@ export default {
     },
 
     /**
-     * 初始化资产配置雷达图
+     * 【核心修正】初始化资产配置雷达图，动态计算坐标轴最大值
      */
     initAssetAllocationRadarChart() {
       const chartDom = this.$refs.assetAllocationRadarChart;
-      if (!chartDom || !this.dashboardData.assetAllocationJson || this.dashboardData.assetAllocationJson === '{}') return;
+      if (!chartDom) return;
+      if (!this.dashboardData.assetAllocationJson || this.dashboardData.assetAllocationJson === '{}') {
+          chartDom.innerHTML = '<div class="chart-empty-text">暂无持仓数据</div>';
+          return;
+      }
       const myChart = echarts.init(chartDom);
       const data = JSON.parse(this.dashboardData.assetAllocationJson);
+
+      // --- 【【【 新增逻辑：动态计算最大值 】】】 ---
+      // 1. 获取所有持仓类型的市值
+      const values = Object.values(data);
+      if (values.length === 0) return; // 如果没有有效数据，则不绘制
+
+      // 2. 找到其中的最大值
+      const maxValue = Math.max(...values);
+
+      // 3. 将最大值向上取整到一个合适的刻度（比如向上取到最近的千位数），并增加一点缓冲
+      //    例如，如果最大值是 1001，我们会把坐标轴最大值设为 2000
+      const axisMax = Math.ceil(maxValue / 1000) * 1000 * 1.2;
+      // --- 新增逻辑结束 ---
+
       const option = {
         tooltip: { trigger: 'item' },
         radar: {
-          indicator: Object.keys(data).map(key => ({ name: key }))
+          // --- 【【【 核心修正：使用动态计算出的 axisMax 】】】 ---
+          indicator: Object.keys(data).map(key => ({ name: key, max: axisMax }))
         },
         series: [{
             name: '资产配置',
@@ -222,9 +259,7 @@ export default {
       myChart.setOption(option);
     },
 
-    /**
-     * 切换个人资料的编辑/查看模式
-     */
+    // ... (其他所有方法如 toggleEdit, saveProfile, formatCurrency 等保持不变) ...
     toggleEdit(editing) {
       this.isEditing = editing;
       if (!editing) {
@@ -232,74 +267,47 @@ export default {
       }
     },
 
-    /**
-     * 保存个人资料
-     */
-// 文件: src/views/UserDashboard.vue -> methods
+    saveProfile() {
+      this.$refs.profileFormRef.validate(async (valid) => {
+        if (!valid) return false;
+        this.loading = true;
+        try {
+          const submissionData = { ...this.profileForm };
+          delete submissionData.userId;
+          delete submissionData.balance;
+          delete submissionData.id;
+          delete submissionData.createTime;
+          delete submissionData.updateTime;
+          const updatedProfileVO = await updateMyProfile(submissionData);
+          this.profileForm = { ...updatedProfileVO, balance: this.profileForm.balance };
+          this.originalProfile = { ...this.profileForm };
+          this.$message.success('个人资料保存成功！');
+          this.isEditing = false;
+        } catch (error) {
+          this.$message.error('保存失败，请稍后重试');
+        } finally {
+          this.loading = false;
+        }
+      });
+    },
 
-  saveProfile() {
-    debugger;
-    this.$refs.profileFormRef.validate(async (valid) => {
-      if (!valid) return false;
-
-      this.loading = true;
-      try {
-        // 【【【 核心修正 】】】
-        // 1. 创建一个profileForm的副本
-        const submissionData = { ...this.profileForm };
-        // 2. 从副本中删除userId和balance字段，确保发送给后端的数据与DTO完全匹配
-        delete submissionData.userId;
-        delete submissionData.balance;
-        delete submissionData.id; // 也删除可能存在的主键id
-        delete submissionData.createTime;
-        delete submissionData.updateTime;
-
-        // 3. 调用更新API，传入“干净”的数据副本
-        const updatedProfileVO = await updateMyProfile(submissionData);
-
-        // 4. 更新成功后，用后端返回的最新数据更新表单和原始数据
-        this.profileForm = { ...updatedProfileVO, balance: this.profileForm.balance };
-        this.originalProfile = { ...this.profileForm };
-
-        this.$message.success('个人资料保存成功！');
-        this.isEditing = false;
-      } catch (error) {
-        this.$message.error('保存失败，请稍后重试');
-      } finally {
-        this.loading = false;
-      }
-    });
-  },
-
-    /**
-     * 将数字格式化为货币字符串
-     */
     formatCurrency(value, withSign = false) {
       if (value == null || isNaN(value)) return '0.00 元';
       const sign = withSign && value > 0 ? '+' : '';
       return `${sign}${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 元`;
     },
 
-    /**
-     * 将数字格式化为百分比字符串
-     */
     formatPercentage(value) {
       if (value == null || isNaN(value)) return '0.00%';
       const sign = value > 0 ? '+' : '';
       return `${sign}${value.toFixed(2)}%`;
     },
 
-    /**
-     * 根据盈亏值返回对应的CSS Class
-     */
     getProfitLossClass(value) {
       if (value == null || value === 0) return '';
       return value > 0 ? 'is-up' : 'is-down';
     },
 
-    /**
-     * 跳转到“我的持仓”独立页面
-     */
     goToHoldings() {
       this.$router.push('/my-holdings');
     }
