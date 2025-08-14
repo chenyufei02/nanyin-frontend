@@ -188,6 +188,7 @@ export default {
           transactionAmount: Number(this.form.amount),
           amount: Number(this.form.amount),
           bankCardNo: this.form.bankCardNo,
+          bank_account_number: this.form.bankCardNo, // 添加数据库字段名
           unitNetValue: this.fund?.performance?.unitNetValue ?? null,
           transactionTime: this.formatDateTimeLocal(new Date())
         };
