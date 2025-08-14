@@ -159,6 +159,18 @@ export default {
         this.balance = 0;
       }
     },
+    // 将日期格式化为后端要求的本地时间格式：YYYY-MM-DDTHH:mm:ss（不带Z）
+    formatDateTimeLocal(date) {
+      const d = date instanceof Date ? date : new Date(date);
+      const pad = n => String(n).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      const MM = pad(d.getMonth() + 1);
+      const dd = pad(d.getDate());
+      const HH = pad(d.getHours());
+      const mm = pad(d.getMinutes());
+      const ss = pad(d.getSeconds());
+      return `${yyyy}-${MM}-${dd}T${HH}:${mm}:${ss}`;
+    },
     goBack() {
       const fundCode = this.form.fundCode;
       this.$router.push(`/funds/${fundCode}`);
@@ -166,24 +178,32 @@ export default {
     handleSubmit() {
       this.$refs.purchaseForm.validate(async valid => {
         if (!valid) return;
-        if (!this.userId) {
-          this.$message.error('获取用户信息失败，请重新登录后再试');
-          return;
-        }
         if (this.form.amount > this.balance) {
           this.$message.error('金额不足');
           return;
         }
         const payload = {
-          userId: this.userId,
           fundCode: this.form.fundCode,
-          transactionAmount: this.form.amount,
-          transactionTime: new Date().toISOString()
+          // 兼容后端不同字段命名
+          transactionAmount: Number(this.form.amount),
+          amount: Number(this.form.amount),
+          bankCardNo: this.form.bankCardNo,
+          unitNetValue: this.fund?.performance?.unitNetValue ?? null,
+          transactionTime: this.formatDateTimeLocal(new Date())
         };
         this.submitting = true;
         try {
-          await purchaseFund(payload);
-          await this.fetchBalance();
+          const resp = await purchaseFund(payload);
+          // 如果后端返回了新的余额，则直接使用返回值覆盖（兼容多种字段）
+          const possibleBalance = (resp && (
+            resp.availableBalance ?? resp.balance ?? resp.newBalance ??
+            (resp.data ? (resp.data.availableBalance ?? resp.data.balance ?? resp.data.newBalance) : undefined)
+          ));
+          if (possibleBalance != null) {
+            this.balance = Number(possibleBalance);
+          } else {
+            await this.fetchBalance();
+          }
           this.$message.success(`购买成功，新的可用余额：${this.formattedBalance} 元`);
           this.form.amount = null;
         } catch (e) {
