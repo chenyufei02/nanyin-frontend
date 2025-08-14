@@ -44,7 +44,7 @@
 
 <script>
 import { getFundDetail } from '@/api/fund.js';
-import { purchaseFund } from '@/api/user.js';
+import { purchaseFund, getMyProfile } from '@/api/user.js';
 
 export default {
   name: 'FundPurchase',
@@ -53,6 +53,7 @@ export default {
       loading: true,
       submitting: false,
       fund: null,
+      userId: null,
       balance: 0,
       form: {
         fundCode: '',
@@ -84,12 +85,20 @@ export default {
           { required: true, message: '请输入购买金额', trigger: 'blur' },
           { type: 'number', message: '金额必须是数字', trigger: 'blur' },
           { validator: (rule, value, callback) => {
+              if (value == null || value === '') {
+                callback();
+                return;
+              }
               if (value <= 0) {
                 callback(new Error('金额必须大于0'));
-              } else {
-                callback();
+                return;
               }
-            }, trigger: 'blur' }
+              if (Number(value) > Number(this.balance || 0)) {
+                callback(new Error('金额不足'));
+                return;
+              }
+              callback();
+            }, trigger: 'change' }
         ]
       }
     };
@@ -134,12 +143,20 @@ export default {
         this.fund = await getFundDetail(fundCode);
         this.form.fundCode = this.fund?.basicInfo?.fundCode || fundCode;
         this.form.fundName = this.fund?.basicInfo?.fundName || '';
-        // TODO: 从后端获取真实的银行卡和余额。此处先用占位值，等待接入银行卡管理接口
-        this.balance = 100000.00;
+        await this.fetchBalance();
       } catch (e) {
         this.$message.error('加载基金信息失败');
       } finally {
         this.loading = false;
+      }
+    },
+    async fetchBalance() {
+      try {
+        const profile = await getMyProfile();
+        this.balance = Number(profile && profile.balance != null ? profile.balance : 0);
+        this.userId = (profile && (profile.userId != null ? profile.userId : profile.id)) || null;
+      } catch (e) {
+        this.balance = 0;
       }
     },
     goBack() {
@@ -149,21 +166,26 @@ export default {
     handleSubmit() {
       this.$refs.purchaseForm.validate(async valid => {
         if (!valid) return;
+        if (!this.userId) {
+          this.$message.error('获取用户信息失败，请重新登录后再试');
+          return;
+        }
         if (this.form.amount > this.balance) {
-          this.$message.error('余额不足，无法购买');
+          this.$message.error('金额不足');
           return;
         }
         const payload = {
+          userId: this.userId,
           fundCode: this.form.fundCode,
-          amount: this.form.amount,
-          bankCardNo: this.form.bankCardNo,
-          unitNetValue: this.fund?.performance?.unitNetValue || null
+          transactionAmount: this.form.amount,
+          transactionTime: new Date().toISOString()
         };
         this.submitting = true;
         try {
           await purchaseFund(payload);
-          this.$message.success('购买成功');
-          this.goBack();
+          await this.fetchBalance();
+          this.$message.success(`购买成功，新的可用余额：${this.formattedBalance} 元`);
+          this.form.amount = null;
         } catch (e) {
           this.$message.error(e.message || '购买失败');
         } finally {
