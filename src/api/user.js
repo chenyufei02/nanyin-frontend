@@ -68,7 +68,7 @@ export function getMyHoldings() {
  */
 export function purchaseFund(data) {
   return request({
-    url: 'http://127.0.0.1:4523/m1/6915480-6631474-default/api/transaction/purchase',
+    url: '/transaction/purchase',
     method: 'post',
     data: data
   });
