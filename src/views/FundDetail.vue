@@ -56,38 +56,97 @@
         <el-table-column prop="rank" label="同类排名"></el-table-column>
       </el-table>
     </el-card>
-
     <el-card class="box-card chart-card">
-      <div slot="header">
-        <span><i class="el-icon-data-line"></i> 历史净值走势 (近一年)</span>
+      <div slot="header" class="clearfix">
+        <span><i class="el-icon-trend-charts"></i> 历史净值走势</span>
+        <el-date-picker
+            v-model="dateRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            :picker-options="pickerOptions"
+            @change="handleDateChange"
+            value-format="yyyy-MM-dd">
+        </el-date-picker>
       </div>
-      <div ref="netValueChart" class="chart-container"></div>
+      <div id="netValueChart" style="height: 400px;"></div>
     </el-card>
+  </div>
+      <!-- 净值走势图 -->
 
-  </div>
-  <div v-else-if="loading" class="loading-container">
-    <el-skeleton :rows="6" animated />
-  </div>
-  <div v-else class="error-container">
-    <el-alert title="基金数据加载失败" type="error" :closable="false" show-icon>
-      无法找到该基金的详细信息，或加载过程中出现错误。
-    </el-alert>
-  </div>
+<!--      <div v-else-if="loading" class="loading-container">-->
+<!--      <el-skeleton :rows="6" animated />-->
+<!--      </div>-->
+<!--    <div v-else class="error-container">-->
+<!--      <el-alert title="基金数据加载失败" type="error" :closable="false" show-icon>-->
+<!--      无法找到该基金的详细信息，或加载过程中出现错误。-->
+<!--      </el-alert>-->
+<!--    </div>-->
 </template>
 
 <script>
-import { getFundDetail } from '@/api/fund.js';
 import moment from 'moment';
 import * as echarts from 'echarts';
+// 导入API函数
+import {getFundDetail, getFundNetValueTrends} from '@/api/fund.js';
+
 
 export default {
   name: 'FundDetail',
   data() {
     return {
-      loading: true,
-      fundData: null,
-      fundCode: null,
-      chartInstance: null
+      loading: true,    // 页面加载状态
+      fundData: null,   // 用于存储从后端获取的所有基金数据
+      fundCode: null,    // 从URL中获取的基金代码
+      dateRange: null,     // 日期范围
+      chartInstance: null,
+      chart: null,        // ECharts实例
+      pickerOptions: {    // 日期选择器配置
+        disabledDate: (time) => {
+          // 禁用大于最新净值日期的日期
+          if (this.fundData && this.fundData.performance && this.fundData.performance.endDate) {
+            return time.getTime() > moment(this.fundData.performance.endDate).endOf('day');
+          }
+          return false;
+        },
+        shortcuts: [{
+          text: '最近一周',
+          onClick: (picker) => {
+            const end = moment(this.fundData.performance.endDate).toDate();
+            const start = moment(this.fundData.performance.endDate).subtract(7, 'days').toDate();
+            picker.$emit('pick', [start, end]);
+          }
+        }, {
+          text: '最近一个月',
+          onClick: (picker) => {
+            const end = moment(this.fundData.performance.endDate).toDate();
+            const start = moment(this.fundData.performance.endDate).subtract(1, 'month').toDate();
+            picker.$emit('pick', [start, end]);
+          }
+        }, {
+          text: '最近三个月',
+          onClick: (picker) => {
+            const end = moment(this.fundData.performance.endDate).toDate();
+            const start = moment(this.fundData.performance.endDate).subtract(3, 'months').toDate();
+            picker.$emit('pick', [start, end]);
+          }
+        }, {
+          text: '最近六个月',
+          onClick: (picker) => {
+            const end = moment(this.fundData.performance.endDate).toDate();
+            const start = moment(this.fundData.performance.endDate).subtract(6, 'months').toDate();
+            picker.$emit('pick', [start, end]);
+          }
+        }, {
+          text: '最近一年',
+          onClick: (picker) => {
+            const end = moment(this.fundData.performance.endDate).toDate();
+            const start = moment(this.fundData.performance.endDate).subtract(1, 'year').toDate();
+            picker.$emit('pick', [start, end]);
+          }
+        }]
+      }
     };
   },
   computed: {
@@ -141,9 +200,33 @@ export default {
       ];
     }
   },
-  created() {
+  mounted() {
+    // 页面挂载时，从URL中获取基金代码并获取数据
+
+    // 添加窗口大小调整事件监听
+    window.addEventListener('resize', this.handleResize);
+  },
+
+  beforeDestroy() {
+    // 组件销毁前清理事件监听和图表实例
+    window.removeEventListener('resize', this.handleResize);
+    if (this.chart) {
+      this.chart.dispose();
+      this.chart = null;
+    }
+  },
+
+  async created() {
     this.fundCode = this.$route.params.fundCode;
-    this.fetchFundDetails();
+    // 先获取基金详情，再设置默认日期范围
+    await this.fetchFundDetails();
+    if (this.fundData && this.fundData.performance && this.fundData.performance.endDate) {
+      const end = moment(this.fundData.performance.endDate).toDate();
+      const start = moment(this.fundData.performance.endDate).subtract(1, 'month').toDate();
+      this.dateRange = [start, end];
+      // 获取净值走势数据
+      this.handleDateChange(this.dateRange);
+    }
   },
   methods: {
     async fetchFundDetails() {
@@ -186,6 +269,134 @@ export default {
     goToPurchase() {
       if (!this.fundCode) return;
       this.$router.push(`/funds/${this.fundCode}/purchase`);
+    },
+
+    // 处理日期范围变化
+    async handleDateChange(dates) {
+      if (!dates) return;
+      try {
+        // 将日期格式转换为后端所需的格式
+        const startDate = moment(dates[0]).format('YYYY-MM-DD');
+        const endDate = moment(dates[1]).format('YYYY-MM-DD');
+        const response = await getFundNetValueTrends(this.fundCode, startDate, endDate);
+        if (response && typeof response === 'object' && response[this.fundCode]) {
+          this.updateChart(response);
+        } else {
+          console.error('净值走势数据格式不正确:', response);
+          this.$message.error('获取净值走势数据失败，数据格式不正确');
+        }
+      } catch (error) {
+        console.error('获取净值走势数据失败:', error);
+        if (error.response && error.response.status === 400) {
+          this.$message.error('日期格式不正确，请重新选择日期范围');
+        } else {
+          this.$message.error('获取净值走势数据失败，请稍后重试');
+        }
+      }
+    },
+
+    // 初始化图表
+    initChart() {
+      if (!this.chart) {
+        this.chart = echarts.init(document.getElementById('netValueChart'));
+      }
+    },
+
+    // 更新图表数据
+    updateChart(data) {
+      if (!data || !data[this.fundCode] || !Array.isArray(data[this.fundCode]) || data[this.fundCode].length === 0) {
+        console.error('暂无净值走势数据');
+        const chartDom = document.getElementById('netValueChart');
+        if (chartDom) {
+          chartDom.innerHTML = '<div class="chart-empty-text">暂无历史净值数据</div>';
+        }
+        return;
+      }
+      this.initChart();
+      const trendData = data[this.fundCode];
+      
+      // 计算净值的最大最小值，用于设置y轴范围
+      const values = trendData.map(item => item.unitNetValue);
+      const minValue = Math.min(...values);
+      const maxValue = Math.max(...values);
+      const valueRange = maxValue - minValue;
+      // 设置y轴的范围，上下各扩展20%
+      const yMin = minValue - valueRange * 0.2;
+      const yMax = maxValue + valueRange * 0.2;
+      
+      const option = {
+        tooltip: {
+          trigger: 'axis',
+          formatter: function(params) {
+            const data = params[0].data;
+            return `日期：${moment(data[0]).format('YYYY-MM-DD')}<br/>净值：${data[1].toFixed(4)}`;
+          }
+        },
+        xAxis: {
+          type: 'time',
+          boundaryGap: false,
+          axisLabel: {
+            formatter: function(value) {
+              return moment(value).format('MM-DD');
+            }
+          }
+        },
+        yAxis: {
+          type: 'value',
+          name: '单位净值',
+          min: yMin,
+          max: yMax,
+          splitLine: {
+            show: true,
+            lineStyle: {
+              type: 'dashed'
+            }
+          },
+          axisLabel: {
+             formatter: function(value) {
+               return value.toFixed(4);
+             }
+           }
+        },
+        series: [{
+          name: '单位净值',
+          type: 'line',
+          data: trendData.map(item => [item.date, item.unitNetValue]),
+          symbol: 'circle',
+          symbolSize: 6,
+          lineStyle: {
+            width: 2,
+            color: '#409EFF'
+          },
+          itemStyle: {
+            color: '#409EFF'
+          },
+          areaStyle: {
+            color: {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [{
+                offset: 0,
+                color: 'rgba(64,158,255,0.3)'
+              }, {
+                offset: 1,
+                color: 'rgba(64,158,255,0)'
+              }]
+            }
+          }
+        }]
+      };
+      this.chart.setOption(option);
+    },
+
+    // 处理窗口大小变化
+    handleResize() {
+      if (this.chart) {
+        this.chart.resize();
+      }
     },
     formatRank(rank, base) {
       if (rank == null || base == null || base === 0) return 'N/A';
@@ -268,5 +479,20 @@ export default {
   text-align: center;
   color: #909399;
   padding-top: 150px;
+}
+
+.chart-card {
+  margin-top: 20px;
+}
+
+.chart-card .clearfix {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#netValueChart {
+  width: 100%;
+  margin-top: 20px;
 }
 </style>
