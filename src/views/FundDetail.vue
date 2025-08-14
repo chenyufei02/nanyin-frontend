@@ -12,7 +12,7 @@
         </div>
       </div>
 
-      <el-row class="fund-actions" type="flex" justify="end">
+      <el-row class="fund-actions" type="flex" justify="right">
         <el-col :span="8" :offset="16" style="text-align: right;">
           <el-button type="primary" @click="goToPurchase">购买</el-button>
         </el-col>
@@ -73,16 +73,7 @@
       <div id="netValueChart" style="height: 400px;"></div>
     </el-card>
   </div>
-      <!-- 净值走势图 -->
 
-<!--      <div v-else-if="loading" class="loading-container">-->
-<!--      <el-skeleton :rows="6" animated />-->
-<!--      </div>-->
-<!--    <div v-else class="error-container">-->
-<!--      <el-alert title="基金数据加载失败" type="error" :closable="false" show-icon>-->
-<!--      无法找到该基金的详细信息，或加载过程中出现错误。-->
-<!--      </el-alert>-->
-<!--    </div>-->
 </template>
 
 <script>
@@ -245,10 +236,29 @@ export default {
     },
     initNetValueChart() {
       const chartDom = this.$refs.netValueChart;
-      if (!chartDom || !this.fundData || !this.fundData.netValueHistory || this.fundData.netValueHistory.length === 0) {
-        chartDom.innerHTML = '<div class="chart-empty-text">暂无历史净值数据</div>';
+
+      // --- 【【【 核心修正：分步判断，修复逻辑漏洞 】】】 ---
+
+      // 1. 首先，也是最重要的一步：先确认图表的HTML容器(chartDom)是否已准备好。
+      //    如果还没准备好，就什么也别做，直接退出函数，这可以完美避免报错。
+      if (!chartDom) {
+        console.warn("图表容器尚未渲染，跳过本次初始化。");
         return;
       }
+
+      // 2. 只有在确认HTML元素存在后，我们才继续判断数据是否有效。
+      //    现在我们可以安全地操作 chartDom 了。
+      if (!this.fundData || !this.fundData.netValueHistory || this.fundData.netValueHistory.length === 0) {
+        // 如果没有数据，安全地设置提示文本
+        chartDom.innerHTML = '<div class="chart-empty-text">暂无历史净值数据</div>';
+        // 如果之前有图表实例，最好清空一下，避免旧图残留
+        if (this.chartInstance) {
+          this.chartInstance.clear();
+        }
+        return;
+      }
+
+      // 如果代码能执行到这里，说明容器和数据都已就绪，开始画图
       this.chartInstance = echarts.init(chartDom);
       const dates = this.fundData.netValueHistory.map(item => moment(item.endDate).format('YYYY-MM-DD'));
       const unitValues = this.fundData.netValueHistory.map(item => item.unitNetValue);
@@ -314,7 +324,7 @@ export default {
       }
       this.initChart();
       const trendData = data[this.fundCode];
-      
+
       // 计算净值的最大最小值，用于设置y轴范围
       const values = trendData.map(item => item.unitNetValue);
       const minValue = Math.min(...values);
@@ -323,7 +333,7 @@ export default {
       // 设置y轴的范围，上下各扩展20%
       const yMin = minValue - valueRange * 0.2;
       const yMax = maxValue + valueRange * 0.2;
-      
+
       const option = {
         tooltip: {
           trigger: 'axis',
