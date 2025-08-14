@@ -28,6 +28,12 @@ const routes = [
         component: () => import('../views/FundDetail.vue'),
         meta: { requiresAuth: true }
       },
+      {
+        path: 'funds/:fundCode/purchase',
+        name: 'FundPurchase', // 基金购买页
+        component: () => import('../views/FundPurchase.vue'),
+        meta: { requiresAuth: true }
+      },
       // 【核心修正】确保“我的持仓”和“交易记录”的路由只定义一次
       {
         path: 'my-holdings',
