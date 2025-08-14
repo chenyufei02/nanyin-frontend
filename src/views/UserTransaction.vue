@@ -55,6 +55,11 @@
               {{ formatNumber(scope.row.shares, 2) }}
             </template>
           </el-table-column>
+          <el-table-column label="银行卡号" width="150" align="center">
+            <template slot-scope="scope">
+              {{ scope.row.bank_account_number || scope.row.bankCardNo || '未记录' }}
+            </template>
+          </el-table-column>
           <el-table-column label="交易状态" width="100" align="center">
             <template slot-scope="scope">
               <el-tag :type="getStatusTag(scope.row.status)">
@@ -104,6 +109,7 @@
           </el-descriptions-item>
           <el-descriptions-item label="交易金额">{{ formatNumber(currentTransaction.amount, 2) }}</el-descriptions-item>
           <el-descriptions-item label="交易份额">{{ formatNumber(currentTransaction.shares, 2) }}</el-descriptions-item>
+          <el-descriptions-item label="银行卡号">{{ currentTransaction.bank_account_number || currentTransaction.bankCardNo || '未记录' }}</el-descriptions-item>
           <el-descriptions-item label="交易状态">
             <el-tag :type="getStatusTag(currentTransaction.status)">
               {{ formatStatus(currentTransaction.status) }}
