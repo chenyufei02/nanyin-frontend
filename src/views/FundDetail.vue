@@ -42,7 +42,29 @@
       </el-row>
     </el-card>
 
-    </div>
+    <el-card class="box-card performance-card">
+      <div slot="header">
+        <span><i class="el-icon-s-marketing"></i> 业绩表现</span>
+      </div>
+      <el-table :data="performanceData" style="width: 100%" stripe>
+        <el-table-column prop="stage" label="阶段" width="120"></el-table-column>
+        <el-table-column label="本基金涨幅">
+          <template slot-scope="scope">
+            <span :class="getProfitLossClass(scope.row.growthRate)">{{ formatPercentage(scope.row.growthRate) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="rank" label="同类排名"></el-table-column>
+      </el-table>
+    </el-card>
+
+    <el-card class="box-card chart-card">
+      <div slot="header">
+        <span><i class="el-icon-data-line"></i> 历史净值走势 (近一年)</span>
+      </div>
+      <div ref="netValueChart" class="chart-container"></div>
+    </el-card>
+
+  </div>
   <div v-else-if="loading" class="loading-container">
     <el-skeleton :rows="6" animated />
   </div>
@@ -54,21 +76,21 @@
 </template>
 
 <script>
-// 1. 导入我们封装好的“获取基金详情”的API函数
-import {getFundDetail} from '@/api/fund.js';
-import moment from 'moment'; // 引入一个强大的日期格式化库
+import { getFundDetail } from '@/api/fund.js';
+import moment from 'moment';
+import * as echarts from 'echarts';
 
 export default {
   name: 'FundDetail',
   data() {
     return {
-      loading: true,    // 页面加载状态
-      fundData: null,   // 用于存储从后端获取的所有基金数据
-      fundCode: null    // 从URL中获取的基金代码
+      loading: true,
+      fundData: null,
+      fundCode: null,
+      chartInstance: null
     };
   },
   computed: {
-    // 使用计算属性来安全地、带格式地显示数据
     latestNetValue() {
       return this.fundData?.performance?.unitNetValue?.toFixed(4) || 'N/A';
     },
@@ -89,61 +111,94 @@ export default {
       const date = this.fundData?.performance?.endDate;
       return date ? moment(date).format('YYYY-MM-DD') : 'N/A';
     },
-    /**
-     * 翻译器1：将基金投资类型代码转换为中文
-     */
     formattedFundType() {
       if (!this.fundData || !this.fundData.basicInfo) return '未知类型';
       const typeCode = this.fundData.basicInfo.fundInvestType;
       const typeMap = {
-        '0': '股票型',
-        '1': '债券型',
-        '2': '混合型',
-        '3': '货币型',
-        '6': '基金型',
-        '7': '保本型',
-        '8': 'REITs'
+        '0': '股票型', '1': '债券型', '2': '混合型', '3': '货币型',
+        '6': '基金型', '7': '保本型', '8': 'REITs'
       };
       return typeMap[typeCode] || '其他';
     },
-
-    /**
-     * 翻译器2：将投资风格代码转换为中文
-     */
     formattedInvestStyle() {
       if (!this.fundData || !this.fundData.basicInfo || !this.fundData.basicInfo.investStyle) return '';
       const styleCode = this.fundData.basicInfo.investStyle;
       const styleMap = {
-        '1': '成长型',
-        '2': '价值型', // 收入型通常指价值型
-        '3': '平衡型'
+        '1': '成长型', '2': '价值型', '3': '平衡型'
       };
       return styleMap[styleCode] || '';
+    },
+    performanceData() {
+      if (!this.fundData || !this.fundData.performance) return [];
+      const perf = this.fundData.performance;
+      return [
+        { stage: '最近一周', growthRate: perf.weeklyGrowthRate, rank: this.formatRank(perf.rank1w, perf.rankBase1w) },
+        { stage: '最近一月', growthRate: perf.monthly1mGrowthRate, rank: this.formatRank(perf.rank1m, perf.rankBase1m) },
+        { stage: '最近三月', growthRate: perf.monthly3mGrowthRate, rank: this.formatRank(perf.rank3m, perf.rankBase3m) },
+        { stage: '最近半年', growthRate: perf.monthly6mGrowthRate, rank: this.formatRank(perf.rank6m, perf.rankBase6m) },
+        { stage: '最近一年', growthRate: perf.yearly1yGrowthRate, rank: this.formatRank(perf.rank1y, perf.rankBase1y) },
+        { stage: '成立以来', growthRate: perf.fromEstablishmentGrowthRate, rank: this.formatRank(perf.rankEstablishment, perf.rankBaseEstablishment) },
+      ];
     }
   },
   created() {
-    // 2. 页面创建时，从URL中获取基金代码
     this.fundCode = this.$route.params.fundCode;
-    // 3. 调用方法去获取数据
     this.fetchFundDetails();
   },
   methods: {
-    // 4. 核心方法：调用API获取数据111
     async fetchFundDetails() {
       this.loading = true;
       try {
-        // a. 调用API函数，并传入从URL中获取的fundCode
         this.fundData = await getFundDetail(this.fundCode);
+        this.$nextTick(() => {
+          this.initNetValueChart();
+        });
       } catch (error) {
         console.error("获取基金详情失败:", error);
-        this.fundData = null; // 加载失败时清空数据
+        this.fundData = null;
       } finally {
         this.loading = false;
       }
     },
+    initNetValueChart() {
+      const chartDom = this.$refs.netValueChart;
+      if (!chartDom || !this.fundData || !this.fundData.netValueHistory || this.fundData.netValueHistory.length === 0) {
+        chartDom.innerHTML = '<div class="chart-empty-text">暂无历史净值数据</div>';
+        return;
+      }
+      this.chartInstance = echarts.init(chartDom);
+      const dates = this.fundData.netValueHistory.map(item => moment(item.endDate).format('YYYY-MM-DD'));
+      const unitValues = this.fundData.netValueHistory.map(item => item.unitNetValue);
+      const accumValues = this.fundData.netValueHistory.map(item => item.accumNetValue);
+      const option = {
+        tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+        legend: { data: ['单位净值', '累计净值'] },
+        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+        xAxis: { type: 'category', boundaryGap: false, data: dates },
+        yAxis: { type: 'value', scale: true, axisLabel: { formatter: '{value}' } },
+        series: [
+          { name: '单位净值', type: 'line', smooth: true, data: unitValues },
+          { name: '累计净值', type: 'line', smooth: true, data: accumValues }
+        ]
+      };
+      this.chartInstance.setOption(option);
+    },
     goToPurchase() {
       if (!this.fundCode) return;
       this.$router.push(`/funds/${this.fundCode}/purchase`);
+    },
+    formatRank(rank, base) {
+      if (rank == null || base == null || base === 0) return 'N/A';
+      return `${rank} / ${base}`;
+    },
+    formatPercentage(value) {
+      if (value == null) return 'N/A';
+      const sign = value > 0 ? '+' : '';
+      return `${sign}${value.toFixed(2)}%`;
+    },
+    getProfitLossClass(value) {
+      if (value == null || value === 0) return '';
+      return value > 0 ? 'is-up' : 'is-down';
     }
   }
 };
@@ -191,12 +246,27 @@ export default {
   font-weight: 500;
 }
 .is-up {
-  color: #f56c6c; /* 红色 */
+  color: #f56c6c;
 }
 .is-down {
-  color: #67c23a; /* 绿色 */
+  color: #67c23a;
 }
 .loading-container, .error-container {
   padding: 40px;
+}
+.performance-card {
+  margin-top: 20px;
+}
+.chart-card {
+  margin-top: 20px;
+}
+.chart-container {
+  height: 400px;
+  width: 100%;
+}
+.chart-empty-text {
+  text-align: center;
+  color: #909399;
+  padding-top: 150px;
 }
 </style>
