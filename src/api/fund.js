@@ -40,3 +40,22 @@ export function getMyHoldings() {
   });
 }
 
+/**
+ * 获取基金净值走势数据
+ * @param {string} fundCode - 基金代码
+ * @param {string} startDate - 开始日期，格式：YYYY-MM-DD
+ * @param {string} endDate - 结束日期，格式：YYYY-MM-DD
+ * @returns Promise
+ */
+export function getFundNetValueTrends(fundCode, startDate, endDate) {
+  return request({
+    url: '/fund-info/net-value-trends',
+    method: 'get',
+    params: {
+      fundCodes: fundCode,
+      startDate,
+      endDate
+    }
+  });
+}
+
