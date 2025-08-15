@@ -181,9 +181,9 @@ export default {
           if (data) {
             // 根据当前标签页筛选交易类型
             let shouldShow = true;
-            if (this.activeTab === 'purchase' && data.transactionType !== 'BUY') {
+            if (this.activeTab === 'purchase' && data.transactionType !== '申购') {
               shouldShow = false;
-            } else if (this.activeTab === 'redeem' && data.transactionType !== 'SELL') {
+            } else if (this.activeTab === 'redeem' && data.transactionType !== '赎回') {
               shouldShow = false;
             }
             
@@ -206,10 +206,14 @@ export default {
           let allTransactions = data.transactions || [];
           
           // 根据标签页筛选交易类型
+          // 修改第183-186行和第209-213行的筛选条件：
+         
+          
+          // 第209-213行：所有交易记录的筛选
           if (this.activeTab === 'purchase') {
-            allTransactions = allTransactions.filter(t => t.transactionType === 'BUY');
+            allTransactions = allTransactions.filter(t => t.transactionType === '申购');
           } else if (this.activeTab === 'redeem') {
-            allTransactions = allTransactions.filter(t => t.transactionType === 'SELL');
+            allTransactions = allTransactions.filter(t => t.transactionType === '赎回');
           }
           
           // 根据筛选条件过滤交易记录
