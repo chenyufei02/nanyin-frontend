@@ -317,7 +317,6 @@ export default {
         this.chart = echarts.init(document.getElementById('netValueChart'));
       }
     },
-
     // 更新图表数据
     updateChart(data) {
       if (!data || !data[this.fundCode] || !Array.isArray(data[this.fundCode]) || data[this.fundCode].length === 0) {
@@ -407,7 +406,6 @@ export default {
       };
       this.chart.setOption(option);
     },
-
     // 处理窗口大小变化
     handleResize() {
       if (this.chart) {

@@ -3,7 +3,7 @@ import router from '@/router';
 
 // 1. 创建一个新的axios实例
 const service = axios.create({
-  // 【核心配置】设置基础请求路径（直连后端 8080 端口）
+  // 设置基础请求路径（直连后端 8080 端口）
   baseURL: 'http://localhost:8080/api',
 
   // 设置请求超时时间，单位是毫秒
