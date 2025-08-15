@@ -22,7 +22,6 @@
                 <el-option label="股票型" value="股票型"></el-option>
                 <el-option label="混合型" value="混合型"></el-option>
                 <el-option label="债券型" value="债券型"></el-option>
-                <el-option label="指数型" value="指数型"></el-option>
                 <el-option label="货币型" value="货币型"></el-option>
                 <el-option label="基金型" value="基金型"></el-option>
                 <el-option label="保本型" value="保本型"></el-option>
