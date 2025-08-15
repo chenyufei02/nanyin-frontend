@@ -51,7 +51,7 @@
           </el-table-column>
           <el-table-column label="最新净值" width="120" align="right">
             <template slot-scope="scope">
-              {{ formatNumber(scope.row.netValue, 4) }}
+              {{ formatNumber(scope.row.latestNetValue, 4) }}
             </template>
           </el-table-column>
           <el-table-column label="持仓市值" width="120" align="right">
@@ -125,10 +125,9 @@ export default {
       totalMarketValue: 0,
       totalProfit: 0,
       totalProfitRate: 0,
-      // 搜索表单数据
       searchForm: {
         fundCode: '',
-        fundName: ''
+        fundName: '',
       }
     };
   },
@@ -169,13 +168,31 @@ export default {
         // 处理返回的数据
         this.holdings = data || [];
         
+        // 输出最新净值字段日志
+        console.log('持仓数据原始信息:', this.holdings.map(h => ({
+          fundCode: h.fundCode,
+          fundName: h.fundName,
+          latestNetValue: h.latestNetValue
+        })));
+
         // 计算每个持仓的收益和收益率
         this.holdings.forEach(holding => {
+          // 检查市值是否需要计算
+          if (!holding.marketValue) {
+            // 如果后端没有提供市值，使用最新净值计算
+            holding.marketValue = holding.latestNetValue * holding.totalShares;
+            console.log(`基金${holding.fundCode}计算市值:`, holding.marketValue);
+          }
+
           // 计算收益 = 市值 - 成本价*份额
           const cost = holding.averageCost * holding.totalShares;
           holding.profit = holding.marketValue - cost;
           // 计算收益率 = 收益/成本
           holding.profitRate = cost > 0 ? holding.profit / cost : 0;
+
+          // 输出每个持仓的最新净值日志
+          console.log(`基金${holding.fundCode}(${holding.fundName})的最新净值:`, holding.latestNetValue);
+          console.log(`基金${holding.fundCode}(${holding.fundName})的市值:`, holding.marketValue);
         });
         
         // 计算总市值、总收益和总收益率
