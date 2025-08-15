@@ -15,6 +15,11 @@ export default {
   components: {
     AppNavbar,
     AppSidebar
+  },
+  created() {
+    // 当这个布局组件被创建时（通常在登录成功后），
+    // 立即向 Vuex store 发起一个 action，去获取用户个人资料
+    this.$store.dispatch('fetchUserProfile');
   }
 };
 </script>
