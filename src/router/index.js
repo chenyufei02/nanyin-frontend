@@ -29,6 +29,12 @@ const routes = [
         meta: { requiresAuth: true }
       },
       {
+        path: '/funds/:fundCode/redeem', // 定义赎回页面的路径
+        name: 'FundRedeem',
+        component: () => import('@/views/FundRedeem.vue'), // 指向我们刚刚创建的组件
+        meta: { requiresAuth: true }
+      },
+      {
         path: 'funds/:fundCode/purchase',
         name: 'FundPurchase', // 基金购买页
         component: () => import('../views/FundPurchase.vue'),

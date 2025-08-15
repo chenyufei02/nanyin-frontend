@@ -15,6 +15,7 @@
       <el-row class="fund-actions" type="flex" justify="right">
         <el-col :span="8" :offset="16" style="text-align: right;">
           <el-button type="primary" @click="goToPurchase">购买</el-button>
+          <el-button type="danger" @click="goToRedeem" style="margin-left: 10px;">赎 回</el-button>
         </el-col>
       </el-row>
 
@@ -279,6 +280,11 @@ export default {
     goToPurchase() {
       if (!this.fundCode) return;
       this.$router.push(`/funds/${this.fundCode}/purchase`);
+    },
+    goToRedeem() {
+      if (!this.fundCode) return;
+      // 点击赎回按钮时，跳转到我们新配置的赎回页面路由
+      this.$router.push(`/funds/${this.fundCode}/redeem`);
     },
 
     // 处理日期范围变化

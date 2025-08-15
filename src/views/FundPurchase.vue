@@ -172,6 +172,7 @@ export default {
           userId: this.userId,
           fundCode: this.form.fundCode,
           transactionAmount: this.form.amount, // 直接传递字符串
+          bankAccountNumber: this.form.bankCardNo,
           transactionTime: new Date().toISOString()
         };
 

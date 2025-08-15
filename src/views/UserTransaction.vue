@@ -11,20 +11,30 @@
       </el-tabs>
 
 
-      <el-form :inline="true" :model="filterForm" class="filter-form">
-        <el-form-item label="交易ID">
-          <el-input v-model="filterForm.transactionId" placeholder="请输入交易ID" clearable></el-input>
-        </el-form-item>
-        <el-form-item label="基金代码">
-          <el-input v-model="filterForm.fundCode" placeholder="请输入基金代码" clearable></el-input>
-        </el-form-item>
-        <el-form-item label="基金名称">
-          <el-input v-model="filterForm.fundName" placeholder="请输入基金名称" clearable></el-input>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleFilter">查询</el-button>
-          <el-button @click="resetFilter">重置</el-button>
-        </el-form-item>
+      <el-form :model="filterForm" class="filter-form">
+          <el-row :gutter="20" type="flex" justify="left" align="middle">
+              <el-col :span="5">
+                  <el-form-item label="交易ID" style="margin-bottom: 0;">
+                      <el-input v-model="filterForm.transactionId" placeholder="请输入交易ID" clearable></el-input>
+                  </el-form-item>
+              </el-col>
+              <el-col :span="5">
+                  <el-form-item label="基金代码" style="margin-bottom: 0;">
+                      <el-input v-model="filterForm.fundCode" placeholder="请输入基金代码" clearable></el-input>
+                  </el-form-item>
+              </el-col>
+              <el-col :span="5">
+                  <el-form-item label="基金名称" style="margin-bottom: 0;">
+                      <el-input v-model="filterForm.fundName" placeholder="请输入基金名称" clearable></el-input>
+                  </el-form-item>
+              </el-col>
+              <el-col :span="4">
+                  <el-form-item style="margin-bottom: 0;">
+                      <el-button type="primary" @click="handleFilter">查询</el-button>
+                      <el-button @click="resetFilter">重置</el-button>
+                  </el-form-item>
+              </el-col>
+          </el-row>
       </el-form>
 
       <!-- 加载状态 -->
