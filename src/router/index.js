@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
-import AppLayout from '../components/layout/AppLayout.vue' // 引入主布局
+import AppLayout from '../components/layout/AppLayout.vue'
 
 Vue.use(VueRouter)
 
@@ -8,58 +8,63 @@ const routes = [
   {
     path: '/',
     component: AppLayout,
-    redirect: '/dashboard', // 登录后默认跳转到“我的主页/仪表盘”
+    redirect: '/dashboard',
     children: [
       {
-        path: 'dashboard', // 注意，子路由的path前面不加'/'
-        name: 'UserDashboard',
+        path: 'dashboard',
+        name: 'UserDashboard', // 确保name是唯一的
         component: () => import('../views/UserDashboard.vue'),
-        meta: { requiresAuth: true } // 【新增】标记这个页面需要登录
+        meta: { requiresAuth: true }
       },
       {
         path: 'funds',
-        name: 'FundList',
+        name: 'FundList', // 确保name是唯一的
         component: () => import('../views/FundList.vue'),
-        meta: { requiresAuth: true } // 【新增】标记这个页面需要登录
+        meta: { requiresAuth: true }
       },
       {
-        path: 'funds/:fundCode', // ":fundCode" 是一个动态路径参数
-        name: 'FundDetail',
+        path: 'funds/:fundCode',
+        name: 'FundDetail', // 确保name是唯一的
         component: () => import('../views/FundDetail.vue'),
         meta: { requiresAuth: true }
       },
       {
-        path: 'dashboard', // 注意：因为是子路由，path前面没有'/'
-        name: 'Dashboard',
-        component: () => import('../views/UserDashboard.vue'), // 确保文件名正确
+        path: '/funds/:fundCode/redeem', // 定义赎回页面的路径
+        name: 'FundRedeem',
+        component: () => import('@/views/FundRedeem.vue'), // 指向我们刚刚创建的组件
         meta: { requiresAuth: true }
       },
       {
+        path: 'funds/:fundCode/purchase',
+        name: 'FundPurchase', // 基金购买页
+        component: () => import('../views/FundPurchase.vue'),
+        meta: { requiresAuth: true }
+      },
+      // 【核心修正】确保“我的持仓”和“交易记录”的路由只定义一次
+      {
         path: 'my-holdings',
-        name: 'UserHolding',
-        component: () => import('../views/UserHolding.vue'),
+        name: 'UserHolding', // 确保name是唯一的
+        component: () => import('../views/UserHolding.vue'), // 假设您已创建此文件
         meta: { requiresAuth: true }
       },
       {
         path: 'my-transactions',
-        name: 'UserTransaction',
-        component: () => import('../views/UserTransaction.vue'),
+        name: 'UserTransaction', // 确保name是唯一的
+        component: () => import('../views/UserTransaction.vue'), // 假设您已创建此文件
         meta: { requiresAuth: true }
-      },
-      // ... 其他需要登录才能访问的页面，都在children里配置，并加上 meta: { requiresAuth: true }
+      }
     ]
   },
   {
     path: '/login',
-    name: 'UserLogin',
+    name: 'UserLogin', // 确保name是唯一的
     component: () => import('../views/UserLogin.vue')
   },
   {
     path: '/register',
-    name: 'UserRegister',
+    name: 'UserRegister', // 确保name是唯一的
     component: () => import('../views/UserRegister.vue')
   }
-
 ]
 
 const router = new VueRouter({
@@ -68,27 +73,21 @@ const router = new VueRouter({
   routes
 })
 
-// --- 【核心修改】添加全局前置守卫 ---
+// 全局前置守卫 (保持不变)
 router.beforeEach((to, from, next) => {
-  // 检查目标路由是否需要认证
   if (to.matched.some(record => record.meta.requiresAuth)) {
-    // 检查本地存储中是否有token
     const token = localStorage.getItem('authToken');
     if (token) {
-      // 如果有token，用户已登录，正常放行
       next();
     } else {
-      // 如果没有token，用户未登录，重定向到登录页
       next({
         path: '/login',
-        query: { redirect: to.fullPath } // 可以选择性地记录用户原本想去的页面
+        query: { redirect: to.fullPath }
       });
     }
   } else {
-    // 如果目标路由不需要认证（比如登录页、注册页），直接放行
     next();
   }
 });
-
 
 export default router

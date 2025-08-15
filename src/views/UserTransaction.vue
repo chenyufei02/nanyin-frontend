@@ -4,16 +4,37 @@
       <div slot="header" class="clearfix">
         <h2>交易记录</h2>
       </div>
+      <el-tabs v-model="activeTab" @tab-click="handleTabClick" class="transaction-tabs">
+        <el-tab-pane label="全部交易" name="all"></el-tab-pane>
+        <el-tab-pane label="购买记录" name="purchase"></el-tab-pane>
+        <el-tab-pane label="赎回记录" name="redeem"></el-tab-pane>
+      </el-tabs>
 
-      <!-- 筛选表单 -->
-      <el-form :inline="true" :model="filterForm" class="filter-form">
-        <el-form-item label="交易ID">
-          <el-input v-model="filterForm.transactionId" placeholder="请输入交易ID" clearable></el-input>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleFilter">查询</el-button>
-          <el-button @click="resetFilter">重置</el-button>
-        </el-form-item>
+
+      <el-form :model="filterForm" class="filter-form">
+          <el-row :gutter="20" type="flex" justify="left" align="middle">
+              <el-col :span="5">
+                  <el-form-item label="交易ID" style="margin-bottom: 0;">
+                      <el-input v-model="filterForm.transactionId" placeholder="请输入交易ID" clearable></el-input>
+                  </el-form-item>
+              </el-col>
+              <el-col :span="5">
+                  <el-form-item label="基金代码" style="margin-bottom: 0;">
+                      <el-input v-model="filterForm.fundCode" placeholder="请输入基金代码" clearable></el-input>
+                  </el-form-item>
+              </el-col>
+              <el-col :span="5">
+                  <el-form-item label="基金名称" style="margin-bottom: 0;">
+                      <el-input v-model="filterForm.fundName" placeholder="请输入基金名称" clearable></el-input>
+                  </el-form-item>
+              </el-col>
+              <el-col :span="4">
+                  <el-form-item style="margin-bottom: 0;">
+                      <el-button type="primary" @click="handleFilter">查询</el-button>
+                      <el-button @click="resetFilter">重置</el-button>
+                  </el-form-item>
+              </el-col>
+          </el-row>
       </el-form>
 
       <!-- 加载状态 -->
@@ -35,7 +56,7 @@
           border
           stripe
         >
-          <el-table-column prop="transactionId" label="交易ID" width="120" align="center" />
+          <el-table-column prop="id" label="交易ID" width="120" align="center" />
           <el-table-column prop="fundCode" label="基金代码" width="120" align="center" />
           <el-table-column prop="fundName" label="基金名称" min-width="180" />
           <el-table-column label="交易类型" width="100" align="center">
@@ -45,14 +66,22 @@
               </el-tag>
             </template>
           </el-table-column>
+          <!-- 交易金额列 -->
           <el-table-column label="交易金额" width="120" align="right">
             <template slot-scope="scope">
-              {{ formatNumber(scope.row.amount, 2) }}
+              {{ scope.row.amount || scope.row.transactionAmount || '数据缺失' }}
             </template>
           </el-table-column>
+          
+          <!-- 交易份额列 -->
           <el-table-column label="交易份额" width="120" align="right">
             <template slot-scope="scope">
-              {{ formatNumber(scope.row.shares, 2) }}
+              {{ scope.row.shares || scope.row.transactionShares || '数据缺失' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="银行卡号" width="150" align="center">
+            <template slot-scope="scope">
+              {{ scope.row.bankAccountNumber || '未记录' }}
             </template>
           </el-table-column>
           <el-table-column label="交易状态" width="100" align="center">
@@ -104,6 +133,7 @@
           </el-descriptions-item>
           <el-descriptions-item label="交易金额">{{ formatNumber(currentTransaction.amount, 2) }}</el-descriptions-item>
           <el-descriptions-item label="交易份额">{{ formatNumber(currentTransaction.shares, 2) }}</el-descriptions-item>
+          <el-descriptions-item label="银行卡号">{{ currentTransaction.bank_account_number || currentTransaction.bankCardNo || '未记录' }}</el-descriptions-item>
           <el-descriptions-item label="交易状态">
             <el-tag :type="getStatusTag(currentTransaction.status)">
               {{ formatStatus(currentTransaction.status) }}
@@ -137,10 +167,14 @@ export default {
       pageSize: 10,
       total: 0,
       filterForm: {
-        transactionId: ''
+        transactionId: '',
+        fundCode: '',
+        fundName: ''
+        // 移除 transactionType: ''
       },
       dialogVisible: false,
-      currentTransaction: null
+      currentTransaction: null,
+      activeTab: 'all'
     };
   },
   created() {
@@ -151,12 +185,26 @@ export default {
     async fetchTransactions() {
       this.loading = true;
       try {
-        // 如果有筛选条件，则获取单条交易记录
+        // 如果有交易ID筛选条件，则获取单条交易记录
         if (this.filterForm.transactionId) {
           const data = await getTransactionById(this.filterForm.transactionId);
           if (data) {
-            this.transactions = [data];
-            this.total = 1;
+            // 根据当前标签页筛选交易类型
+            let shouldShow = true;
+            if (this.activeTab === 'purchase' && data.transactionType !== '申购') {
+              shouldShow = false;
+            } else if (this.activeTab === 'redeem' && data.transactionType !== '赎回') {
+              shouldShow = false;
+            }
+            
+            if (shouldShow) {
+              this.transactions = [data];
+              this.total = 1;
+            } else {
+              this.transactions = [];
+              this.total = 0;
+              this.$message.warning('该交易记录不属于当前标签页类型');
+            }
           } else {
             this.transactions = [];
             this.total = 0;
@@ -165,8 +213,39 @@ export default {
         } else {
           // 否则获取所有交易记录
           const data = await getMyTransactions();
-          this.transactions = data.transactions || [];
-          this.total = data.total || this.transactions.length;
+          let allTransactions = data.transactions || [];
+          
+          // 根据标签页筛选交易类型
+          // 修改第183-186行和第209-213行的筛选条件：
+         
+          
+          // 第209-213行：所有交易记录的筛选
+          if (this.activeTab === 'purchase') {
+            allTransactions = allTransactions.filter(t => t.transactionType === '申购');
+          } else if (this.activeTab === 'redeem') {
+            allTransactions = allTransactions.filter(t => t.transactionType === '赎回');
+          }
+          
+          // 根据筛选条件过滤交易记录
+          if (this.filterForm.fundCode) {
+            allTransactions = allTransactions.filter(t => 
+              t.fundCode && t.fundCode.toLowerCase().includes(this.filterForm.fundCode.toLowerCase()));
+          }
+          
+          if (this.filterForm.fundName) {
+            allTransactions = allTransactions.filter(t => 
+              t.fundName && t.fundName.toLowerCase().includes(this.filterForm.fundName.toLowerCase()));
+          }
+          
+          // 添加按交易ID升序排列
+          allTransactions.sort((a, b) => {
+            const idA = parseInt(a.id) || 0;
+            const idB = parseInt(b.id) || 0;
+            return idA - idB;
+          });
+          
+          this.transactions = allTransactions;
+          this.total = allTransactions.length;
         }
       } catch (error) {
         console.error('获取交易记录失败:', error);
@@ -190,9 +269,18 @@ export default {
       this.fetchTransactions();
     },
     
+    // 处理标签页切换
+    handleTabClick() {
+      this.currentPage = 1;
+      this.fetchTransactions();
+    },
+    
     // 重置筛选条件
     resetFilter() {
       this.filterForm.transactionId = '';
+      this.filterForm.fundCode = '';
+      this.filterForm.fundName = '';
+      // 移除 this.filterForm.transactionType = '';
       this.currentPage = 1;
       this.fetchTransactions();
     },
@@ -310,6 +398,9 @@ export default {
 .filter-form {
   margin-bottom: 20px;
 }
+.transaction-tabs {
+  margin-bottom: 15px;
+}
 .loading-container,
 .empty-container {
   padding: 40px;
@@ -321,5 +412,8 @@ export default {
 .pagination-container {
   margin-top: 20px;
   text-align: right;
+}
+.el-tabs__header {
+  margin-bottom: 15px;
 }
 </style>

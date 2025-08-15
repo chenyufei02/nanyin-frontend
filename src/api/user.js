@@ -15,6 +15,7 @@ export function getMyProfile() {
 }
 
 /**
+ * 【【【 核心修正：补上这个缺失的函数！！！ 】】】
  * 更新当前登录用户的个人资料
  * 对应后端的 UserProfileController -> updateUserProfile
  * @param {object} data - 包含待更新字段的UserProfileUpdateDTO对象
@@ -27,6 +28,7 @@ export function updateMyProfile(data) {
     data: data
   });
 }
+
 
 /**
  * 获取当前登录用户的主页仪表盘所有数据 (聚合接口)
@@ -86,17 +88,7 @@ export function redeemFund(data) {
   });
 }
 
-/**
- * 获取当前登录用户的所有交易记录
- * 对应后端的 FundTransactionController -> getMyTransactions
- * @returns Promise
- */
-export function getMyTransactions() {
-  return request({
-    url: '/transaction/my-transactions',
-    method: 'get'
-  });
-}
+
 
 /**
  * 根据交易ID获取当前用户的单条交易详情
@@ -111,34 +103,6 @@ export function getTransactionDetail(transactionId) {
   });
 }
 
-
-// --- 4. 个人风险评估 (RiskAssessment) ---
-
-/**
- * 提交一份新的风险评估问卷
- * 对应后端的 RiskAssessmentController -> submitAssessment
- * @param {object} data - 包含评估分数的RiskAssessmentSubmitDTO对象
- * @returns Promise
- */
-export function submitRiskAssessment(data) {
-  return request({
-    url: '/risk-assessment/submit',
-    method: 'post',
-    data: data
-  });
-}
-
-/**
- * 获取当前登录用户的所有风险评估记录
- * 对应后端的 RiskAssessmentController -> getMyAssessments
- * @returns Promise
- */
-export function getMyRiskAssessments() {
-  return request({
-    url: '/risk-assessment/my-assessments',
-    method: 'get'
-  });
-}
 
 
 // --- 5. AI投资助手 (AI) ---

@@ -11,19 +11,22 @@
       <div class="brand">泓镜基金交易系统</div>
     </div>
     <div class="user-menu">
-      <span>欢迎您, {{ username }}</span>
+      <span>欢迎您, {{ computedUsername }}</span>
       <el-button type="text" class="logout-button" @click="logout">退出登录</el-button>
     </div>
   </div>
 </template>
 
 <script>
+import { mapGetters } from 'vuex';
 export default {
   name: 'AppNavbar',
-  data() {
-    return {
-      username: '测试用户' // 这里暂时使用静态数据
-    };
+  computed: {
+    // 使用 mapGetters 辅助函数，将 store 中的 'username' getter 映射到组件的计算属性中
+    // 这样我们就可以在模板中直接使用 'computedUsername' 了
+    ...mapGetters({
+      computedUsername: 'username'
+    })
   },
   methods: {
     // 后退功能
@@ -34,7 +37,10 @@ export default {
     logout() {
       // 1. 清除本地存储的token
       localStorage.removeItem('authToken');
-      // 2. 跳转到登录页
+      // 【【【 新增以下代码 】】】
+      // 2. 清除 Vuex store 中的用户信息
+      this.$store.commit('CLEAR_USER_PROFILE');
+      // 3. 跳转到登录页
       this.$router.push('/login');
     }
   }

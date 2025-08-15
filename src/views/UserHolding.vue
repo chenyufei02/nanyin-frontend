@@ -4,6 +4,22 @@
       <div slot="header" class="clearfix">
         <h2>我的持仓</h2>
       </div>
+      
+      <!-- 搜索区域 -->
+      <div class="search-container">
+        <el-form :inline="true" :model="searchForm" class="search-form">
+          <el-form-item label="基金代码">
+            <el-input v-model="searchForm.fundCode" placeholder="请输入基金代码" clearable></el-input>
+          </el-form-item>
+          <el-form-item label="基金名称">
+            <el-input v-model="searchForm.fundName" placeholder="请输入基金名称" clearable></el-input>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="handleSearch">搜索</el-button>
+            <el-button @click="resetSearch">重置</el-button>
+          </el-form-item>
+        </el-form>
+      </div>
 
       <div v-if="loading" class="loading-container">
         <el-skeleton :rows="6" animated />
@@ -25,12 +41,17 @@
           <el-table-column prop="fundName" label="基金名称" min-width="180" />
           <el-table-column label="持有份额" width="120" align="right">
             <template slot-scope="scope">
-              {{ formatNumber(scope.row.shares) }}
+              {{ formatNumber(scope.row.totalShares) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="平均成本" width="120" align="right">
+            <template slot-scope="scope">
+              {{ formatNumber(scope.row.averageCost, 4) }}
             </template>
           </el-table-column>
           <el-table-column label="最新净值" width="120" align="right">
             <template slot-scope="scope">
-              {{ formatNumber(scope.row.netValue, 4) }}
+              {{ formatNumber(scope.row.latestNetValue, 4) }}
             </template>
           </el-table-column>
           <el-table-column label="持仓市值" width="120" align="right">
@@ -52,9 +73,10 @@
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="180" align="center">
+          <el-table-column label="操作" width="200" align="center">
             <template slot-scope="scope">
-              <el-button size="mini" type="primary" @click="viewDetails(scope.row.fundCode)">查看详情</el-button>
+              <el-button size="mini" type="primary" @click="goPurchase(scope.row.fundCode)">购买</el-button>
+              <el-button size="mini" type="danger" @click="goRedeem(scope.row.fundCode)">赎回</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -92,7 +114,7 @@
 
 <script>
 // 导入获取持仓信息的API函数
-import { getMyHoldings } from '@/api/fund.js';
+import { getMyHoldings } from '@/api/holding.js';
 
 export default {
   name: 'UserHolding',
@@ -102,7 +124,11 @@ export default {
       holdings: [],
       totalMarketValue: 0,
       totalProfit: 0,
-      totalProfitRate: 0
+      totalProfitRate: 0,
+      searchForm: {
+        fundCode: '',
+        fundName: '',
+      }
     };
   },
   created() {
@@ -113,11 +139,73 @@ export default {
     async fetchHoldings() {
       this.loading = true;
       try {
-        const data = await getMyHoldings();
-        this.holdings = data.holdings || [];
-        this.totalMarketValue = data.totalMarketValue || 0;
-        this.totalProfit = data.totalProfit || 0;
-        this.totalProfitRate = data.totalProfitRate || 0;
+        // 从localStorage获取用户信息
+        let userId = null;
+        const userInfoStr = localStorage.getItem('userInfo');
+        if (userInfoStr) {
+          try {
+            const userInfo = JSON.parse(userInfoStr);
+            userId = userInfo.id;
+          } catch (e) {
+            console.error('解析用户信息失败:', e);
+          }
+        }
+        
+        // 如果没有用户ID，提示用户登录
+        // if (!userId) {
+        //   this.$message.error('请先登录后再查看持仓信息');
+        //   this.$router.push('/login');
+        //   return;
+        // }
+        
+        // 调用API获取持仓数据，传递用户ID和搜索参数
+        const data = await getMyHoldings(
+          userId, 
+          this.searchForm.fundCode, 
+          this.searchForm.fundName
+        );
+        
+        // 处理返回的数据
+        this.holdings = data || [];
+        
+        // 输出最新净值字段日志
+        console.log('持仓数据原始信息:', this.holdings.map(h => ({
+          fundCode: h.fundCode,
+          fundName: h.fundName,
+          latestNetValue: h.latestNetValue
+        })));
+
+        // 计算每个持仓的收益和收益率
+        this.holdings.forEach(holding => {
+          // 检查市值是否需要计算
+          if (!holding.marketValue) {
+            // 如果后端没有提供市值，使用最新净值计算
+            holding.marketValue = holding.latestNetValue * holding.totalShares;
+            console.log(`基金${holding.fundCode}计算市值:`, holding.marketValue);
+          }
+
+          // 计算收益 = 市值 - 成本价*份额
+          const cost = holding.averageCost * holding.totalShares;
+          holding.profit = holding.marketValue - cost;
+          // 计算收益率 = 收益/成本
+          holding.profitRate = cost > 0 ? holding.profit / cost : 0;
+
+          // 输出每个持仓的最新净值日志
+          console.log(`基金${holding.fundCode}(${holding.fundName})的最新净值:`, holding.latestNetValue);
+          console.log(`基金${holding.fundCode}(${holding.fundName})的市值:`, holding.marketValue);
+        });
+        
+        // 计算总市值、总收益和总收益率
+        this.totalMarketValue = this.holdings.reduce((sum, item) => sum + item.marketValue, 0);
+        this.totalProfit = this.holdings.reduce((sum, item) => sum + item.profit, 0);
+        const totalCost = this.holdings.reduce((sum, item) => sum + (item.averageCost * item.totalShares), 0);
+        this.totalProfitRate = totalCost > 0 ? this.totalProfit / totalCost : 0;
+        
+        // 输出日志，方便调试
+        console.log('处理后的持仓数据:', this.holdings);
+        console.log('总市值:', this.totalMarketValue);
+        console.log('总收益:', this.totalProfit);
+        console.log('总收益率:', this.totalProfitRate);
       } catch (error) {
         console.error('获取持仓信息失败:', error);
         if (error.response && error.response.status === 401) {
@@ -155,9 +243,27 @@ export default {
     viewDetails(fundCode) {
       this.$router.push(`/funds/${fundCode}`);
     },
+    // 跳转到购买页面
+    goPurchase(fundCode) {
+      this.$router.push(`/funds/${fundCode}`);
+    },
+    // 跳转到赎回页面
+    goRedeem(fundCode) {
+      this.$router.push(`/funds/${fundCode}`);
+    },
     // 跳转到基金列表
     goToFundList() {
       this.$router.push('/funds');
+    },
+    // 处理搜索
+    handleSearch() {
+      this.fetchHoldings();
+    },
+    // 重置搜索条件
+    resetSearch() {
+      this.searchForm.fundCode = '';
+      this.searchForm.fundName = '';
+      this.fetchHoldings();
     }
   }
 };
@@ -198,5 +304,16 @@ export default {
 }
 .profit-down {
   color: #67c23a; /* 绿色表示下跌 */
+}
+
+/* 搜索区域样式 */
+.search-container {
+  margin-bottom: 20px;
+  background-color: #f5f7fa;
+  padding: 15px;
+  border-radius: 4px;
+}
+.search-form .el-form-item {
+  margin-bottom: 0;
 }
 </style>
