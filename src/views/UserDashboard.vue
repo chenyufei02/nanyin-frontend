@@ -147,14 +147,20 @@ export default {
       originalProfile: {},
       profileRules: {
         name: [{ required: true, message: '请输入真实姓名', trigger: 'blur' }],
-        phone: [{ required: true, message: '请输入手机号', trigger: 'blur' }],
-        idNumber: [{ required: true, message: '请输入证件号码', trigger: 'blur' }],
+        phone: [
+          { required: true, message: '请输入手机号', trigger: 'blur' },
+          { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号格式', trigger: 'blur' }
+        ],
+        idNumber: [
+          { required: true, message: '请输入证件号码', trigger: 'blur' },
+          { validator: this.validateIdNumber, trigger: 'blur' }
+        ],
         // ... 其他规则
       }
     };
   },
 
-  // --- 【【【 核心修正：使用 watch 监听器 】】】 ---
+  // --- 【【【 使用 watch 监听器 】】】 ---
   watch: {
     // 监听 dashboardData 属性的变化
     dashboardData(newData, oldData) {
@@ -164,6 +170,40 @@ export default {
         this.$nextTick(() => {
           this.initCharts();
         });
+      }
+    },
+    
+    // 监听身份证号变化，自动解析出生日期和性别
+    'profileForm.idNumber': function(newValue) {
+      if (this.isEditing && newValue && newValue.length === 18) {
+        try {
+          // 提取身份证中的出生日期部分
+          const year = newValue.substring(6, 10);
+          const month = newValue.substring(10, 12);
+          const day = newValue.substring(12, 14);
+          const birthDateStr = `${year}-${month}-${day}`;
+          
+          // 验证日期是否有效
+          const date = new Date(birthDateStr);
+          if (!isNaN(date.getTime())&& date.getFullYear() > 1900 && // 大于 1900 年
+  date.getFullYear() <= new Date().getFullYear()) //() 不超过当前年份)  
+            {
+            // 设置出生日期 - 使用Date对象以适配日期选择器
+            this.profileForm.birthDate = date;
+            
+            // 根据身份证号第17位判断性别（奇数为男，偶数为女）
+            const genderBit = parseInt(newValue.charAt(16));
+            this.profileForm.gender = genderBit % 2 === 1 ? '男' : '女';
+            
+            console.log('监听器自动解析 - 出生日期:', birthDateStr);
+            console.log('监听器自动解析 - 性别:', this.profileForm.gender);
+            
+            // 提示用户已自动填充信息
+            this.$message.success('已根据身份证号自动填充出生日期和性别');
+          }
+        } catch (error) {
+          console.error('监听器解析身份证出错:', error);
+        }
       }
     }
   },
@@ -359,6 +399,61 @@ export default {
 
     goToHoldings() {
       this.$router.push('/my-holdings');
+    },
+    
+    /**
+     * 验证身份证号码并解析出生日期
+     */
+    validateIdNumber(rule, value, callback) {
+      if (!value) {
+        callback();
+        return;
+      }
+      
+      // 身份证号码格式验证（18位）
+      const reg = /(^\d{15}$)|(^\d{18}$)|(^\d{17}(\d|X|x)$)/;
+      if (!reg.test(value)) {
+        callback(new Error('请输入正确的身份证号码'));
+        return;
+      }
+      
+      // 解析出生日期（适用于18位身份证）
+      if (value.length === 18) {
+        try {
+          // 提取身份证中的出生日期部分（第7-14位）
+          const year = value.substring(6, 10);
+          const month = value.substring(10, 12);
+          const day = value.substring(12, 14);
+          const birthDateStr = `${year}-${month}-${day}`;
+          
+          // 验证日期是否有效
+          const date = new Date(birthDateStr);
+          if (isNaN(date.getTime())) {
+            callback(new Error('身份证号中的出生日期无效'));
+            return;
+          }
+          
+          // 如果正在编辑状态，自动填充出生日期
+          if (this.isEditing) {
+            this.profileForm.birthDate = date;
+            
+            // 根据身份证号第17位判断性别（奇数为男，偶数为女）
+            const genderBit = parseInt(value.charAt(16));
+            this.profileForm.gender = genderBit % 2 === 1 ? '男' : '女';
+            
+            console.log('根据身份证解析出生日期:', birthDateStr);
+            console.log('根据身份证解析性别:', this.profileForm.gender);
+          }
+          
+          callback();
+        } catch (error) {
+          console.error('解析身份证出生日期出错:', error);
+          callback(new Error('身份证号格式有误'));
+        }
+      } else {
+        // 15位身份证处理逻辑（如果需要）
+        callback();
+      }
     }
   }
 };
