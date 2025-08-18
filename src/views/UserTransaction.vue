@@ -72,7 +72,6 @@
               {{ scope.row.amount || scope.row.transactionAmount || '数据缺失' }}
             </template>
           </el-table-column>
-          
           <!-- 交易份额列 -->
           <el-table-column label="交易份额" width="120" align="right">
             <template slot-scope="scope">
@@ -144,6 +143,7 @@
           <el-descriptions-item label="备注" :span="2">{{ currentTransaction.remark || '无' }}</el-descriptions-item>
         </el-descriptions>
       </div>
+      <!-- 对话框底部按钮 -->
       <span slot="footer" class="dialog-footer">
         <el-button @click="dialogVisible = false">关闭</el-button>
         <el-button type="primary" @click="viewFundDetails(currentTransaction.fundCode)">查看基金详情</el-button>
@@ -155,33 +155,41 @@
 <script>
 // 导入交易记录相关的API函数
 import { getMyTransactions, getTransactionById } from '@/api/transaction.js';
+// 导入时间格式化库
 import moment from 'moment';
 
 export default {
   name: 'UserTransaction',
   data() {
     return {
+      // 页面加载状态
       loading: true,
+      // 交易记录数据数组
       transactions: [],
-      currentPage: 1,
-      pageSize: 10,
-      total: 0,
+      // 分页相关数据
+      currentPage: 1,    // 当前页码
+      pageSize: 10,      // 每页显示条数
+      total: 0,          // 总记录数
+      // 筛选表单数据
       filterForm: {
-        transactionId: '',
-        fundCode: '',
-        fundName: ''
-        // 移除 transactionType: ''
+        transactionId: '',  // 交易ID筛选
+        fundCode: '',       // 基金代码筛选
+        fundName: ''        // 基金名称筛选
       },
+      // 交易详情对话框显示状态
       dialogVisible: false,
+      // 当前选中的交易记录
       currentTransaction: null,
+      // 当前激活的标签页
       activeTab: 'all'
     };
   },
+  // 组件创建时获取交易记录
   created() {
     this.fetchTransactions();
   },
   methods: {
-    // 获取交易记录数据
+    // 获取交易记录数据的核心方法
     async fetchTransactions() {
       this.loading = true;
       try {
@@ -216,10 +224,6 @@ export default {
           let allTransactions = data.transactions || [];
           
           // 根据标签页筛选交易类型
-          // 修改第183-186行和第209-213行的筛选条件：
-         
-          
-          // 第209-213行：所有交易记录的筛选
           if (this.activeTab === 'purchase') {
             allTransactions = allTransactions.filter(t => t.transactionType === '申购');
           } else if (this.activeTab === 'redeem') {
@@ -237,7 +241,7 @@ export default {
               t.fundName && t.fundName.toLowerCase().includes(this.filterForm.fundName.toLowerCase()));
           }
           
-          // 添加按交易ID升序排列
+          // 按交易ID升序排列
           allTransactions.sort((a, b) => {
             const idA = parseInt(a.id) || 0;
             const idB = parseInt(b.id) || 0;
@@ -263,7 +267,7 @@ export default {
       }
     },
     
-    // 筛选处理
+    // 处理筛选查询
     handleFilter() {
       this.currentPage = 1;
       this.fetchTransactions();
@@ -280,12 +284,11 @@ export default {
       this.filterForm.transactionId = '';
       this.filterForm.fundCode = '';
       this.filterForm.fundName = '';
-      // 移除 this.filterForm.transactionType = '';
       this.currentPage = 1;
       this.fetchTransactions();
     },
     
-    // 查看交易详情
+    // 查看交易详情（通过ID获取详细信息）
     async viewTransactionDetail(transactionId) {
       try {
         const data = await getTransactionById(transactionId);
@@ -301,7 +304,7 @@ export default {
       }
     },
     
-    // 查看基金详情
+    // 查看基金详情（跳转到基金详情页）
     viewDetails(fundCode) {
       this.$router.push(`/funds/${fundCode}`);
     },
@@ -312,35 +315,36 @@ export default {
       this.$router.push(`/funds/${fundCode}`);
     },
     
-    // 跳转到基金列表
+    // 跳转到基金列表页面
     goToFundList() {
       this.$router.push('/funds');
     },
     
-    // 分页处理
+    // 分页大小改变处理
     handleSizeChange(val) {
       this.pageSize = val;
       this.fetchTransactions();
     },
     
+    // 当前页码改变处理
     handleCurrentChange(val) {
       this.currentPage = val;
       this.fetchTransactions();
     },
     
-    // 格式化数字
+    // 格式化数字显示（保留指定小数位）
     formatNumber(value, decimals = 2) {
       if (value === undefined || value === null) return 'N/A';
       return Number(value).toFixed(decimals);
     },
     
-    // 格式化日期时间
+    // 格式化日期时间显示
     formatDateTime(dateTime) {
       if (!dateTime) return 'N/A';
       return moment(dateTime).format('YYYY-MM-DD HH:mm:ss');
     },
     
-    // 格式化交易类型
+    // 格式化交易类型显示文本
     formatTransactionType(type) {
       const typeMap = {
         'BUY': '购买',
@@ -352,19 +356,19 @@ export default {
       return typeMap[type] || type;
     },
     
-    // 获取交易类型对应的标签类型
+    // 获取交易类型对应的标签颜色类型
     getTransactionTypeTag(type) {
       const tagMap = {
-        'BUY': 'success',
-        'SELL': 'danger',
-        'DIVIDEND': 'warning',
-        'TRANSFER_IN': 'info',
-        'TRANSFER_OUT': 'info'
+        'BUY': 'success',      // 绿色
+        'SELL': 'danger',      // 红色
+        'DIVIDEND': 'warning', // 橙色
+        'TRANSFER_IN': 'info', // 蓝色
+        'TRANSFER_OUT': 'info' // 蓝色
       };
       return tagMap[type] || '';
     },
     
-    // 格式化交易状态
+    // 格式化交易状态显示文本
     formatStatus(status) {
       const statusMap = {
         'PENDING': '处理中',
@@ -376,14 +380,14 @@ export default {
       return statusMap[status] || status;
     },
     
-    // 获取状态对应的标签类型
+    // 获取交易状态对应的标签颜色类型
     getStatusTag(status) {
       const tagMap = {
-        'PENDING': 'info',
-        'CONFIRMED': 'warning',
-        'COMPLETED': 'success',
-        'FAILED': 'danger',
-        'CANCELLED': 'info'
+        'PENDING': 'info',     // 蓝色 - 处理中
+        'CONFIRMED': 'warning', // 橙色 - 已确认
+        'COMPLETED': 'success', // 绿色 - 已完成
+        'FAILED': 'danger',     // 红色 - 失败
+        'CANCELLED': 'info'     // 蓝色 - 已取消
       };
       return tagMap[status] || '';
     }
@@ -392,27 +396,34 @@ export default {
 </script>
 
 <style scoped>
+/* 交易记录页面主容器样式 */
 .transaction-container {
   padding: 20px;
 }
+/* 筛选表单样式 */
 .filter-form {
   margin-bottom: 20px;
 }
+/* 标签页样式 */
 .transaction-tabs {
   margin-bottom: 15px;
 }
+/* 加载和空数据容器样式 */
 .loading-container,
 .empty-container {
   padding: 40px;
   text-align: center;
 }
+/* 空数据状态下的按钮样式 */
 .empty-container .el-button {
   margin-top: 20px;
 }
+/* 分页组件容器样式 */
 .pagination-container {
   margin-top: 20px;
   text-align: right;
 }
+/* 标签页头部样式 */
 .el-tabs__header {
   margin-bottom: 15px;
 }
