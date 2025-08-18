@@ -4,65 +4,70 @@
       <h2 class="page-title">我的主页</h2>
 
       <el-row :gutter="20" class="top-section">
-              <el-col :span="16">
-                      <el-card class="box-card user-profile-card" v-if="dashboardData.userProfile">
-                        <div slot="header" class="clearfix">
-                          <span><i class="el-icon-user-solid"></i> 基础信息</span>
-                        </div>
-                        <div class="user-profile-body">
-                          <div class="profile-header">
-                            <p class="welcome-text">
-                              <strong>欢迎您，{{ dashboardData.userProfile.name || '新用户' }}</strong>
-                            </p>
-                            <div class="tags-container">
-                              <el-tag type="success" style="margin-right: 5px;">稳健型投资者</el-tag>
-                              <el-tag type="warning">长期持有</el-tag>
-                            </div>
-                          </div>
+        <el-col :span="16">
+          <el-card class="box-card user-profile-card" v-if="dashboardData.userProfile">
+            <div slot="header" class="clearfix">
+              <span><i class="el-icon-user-solid"></i> 基础信息</span>
+            </div>
+            <div class="user-profile-body">
+              <div class="profile-header">
+                <p class="welcome-text">
+                  <strong>欢迎您，{{ dashboardData.userProfile.name || '新用户' }}</strong>
+                </p>
+                <div class="tags-container">
+                  <el-tag type="success" style="margin-right: 5px;">稳健型投资者</el-tag>
+                  <el-tag type="warning">长期持有</el-tag>
+                </div>
+              </div>
 
-                          <el-descriptions class="margin-top" :column="2" border>
-                            <el-descriptions-item>
-                              <template slot="label"><i class="el-icon-male"></i><i class="el-icon-female"></i> 性别</template>
-                              {{ dashboardData.userProfile.gender }}
-                            </el-descriptions-item>
-                            <el-descriptions-item>
-                              <template slot="label"><i class="el-icon-date"></i> 年龄</template>
-                              {{ userAge }}
-                            </el-descriptions-item>
-                            <el-descriptions-item>
-                              <template slot="label"><i class="el-icon-briefcase"></i> 职业</template>
-                              <el-tag size="small">{{ dashboardData.userProfile.occupation }}</el-tag>
-                            </el-descriptions-item>
-                            <el-descriptions-item>
-                              <template slot="label"><i class="el-icon-postcard"></i> 证件类型</template>
-                              {{ dashboardData.userProfile.idType }}
-                            </el-descriptions-item>
-                            <el-descriptions-item>
-                              <template slot="label"><i class="el-icon-bank-card"></i> 证件号码</template>
-                              {{ dashboardData.userProfile.idNumber }}
-                            </el-descriptions-item>
-                            <el-descriptions-item>
-                              <template slot="label"><i class="el-icon-location-outline"></i> 联系地址</template>
-                              {{ dashboardData.userProfile.address }}
-                            </el-descriptions-item>
-                          </el-descriptions>
-                        </div>
-                      </el-card>
-                    </el-col>
+              <el-descriptions class="margin-top" :column="2" border>
+                <el-descriptions-item>
+                  <template slot="label"><i class="el-icon-male"></i><i class="el-icon-female"></i> 性别</template>
+                  {{ dashboardData.userProfile.gender }}
+                </el-descriptions-item>
+                <el-descriptions-item>
+                  <template slot="label"><i class="el-icon-date"></i> 年龄</template>
+                  {{ userAge }}
+                </el-descriptions-item>
+                <el-descriptions-item>
+                  <template slot="label"><i class="el-icon-briefcase"></i> 职业</template>
+                  <el-tag size="small">{{ dashboardData.userProfile.occupation }}</el-tag>
+                </el-descriptions-item>
+                <el-descriptions-item>
+                  <template slot="label"><i class="el-icon-postcard"></i> 证件类型</template>
+                  {{ dashboardData.userProfile.idType }}
+                </el-descriptions-item>
+                <el-descriptions-item>
+                  <template slot="label"><i class="el-icon-bank-card"></i> 证件号码</template>
+                  {{ dashboardData.userProfile.idNumber }}
+                </el-descriptions-item>
+                <el-descriptions-item>
+                  <template slot="label"><i class="el-icon-location-outline"></i> 联系地址</template>
+                  {{ dashboardData.userProfile.address }}
+                </el-descriptions-item>
+              </el-descriptions>
+            </div>
+          </el-card>
+        </el-col>
 
-              <el-col :span="8">
-                 <el-card class="box-card ai-card">
-                   <div slot="header"><span><i class="el-icon-magic-stick"></i> AI投资助手</span></div>
-                   <div class="ai-card-body">
-                      <p>获取一份为您量身定制的投资分析与建议报告。</p>
-                      <el-button type="primary" @click="fetchAISuggestion" :loading="aiLoading">立即生成</el-button>
-                   </div>
-                 </el-card>
-              </el-col>
-            </el-row>
+        <el-col :span="8">
+          <el-card class="box-card ai-card">
+            <div slot="header"><span><i class="el-icon-magic-stick"></i> AI投资助手</span></div>
+            <div class="ai-card-body">
+              <p>获取一份为您量身定制的投资分析与建议报告。</p>
+              <el-button type="primary" @click="fetchAISuggestion" :loading="aiLoading">立即生成</el-button>
+            </div>
+          </el-card>
+        </el-col>
+      </el-row>
 
       <el-row :gutter="20" class="stats-section">
-        <el-col :span="5"><div class="stat-card"><div class="stat-label">可用余额</div><div class="stat-value">{{ formatCurrency(dashboardData.balance) }}</div></div></el-col>
+        <el-col :span="5">
+          <div class="stat-card">
+            <div class="stat-label">可用余额</div>
+            <div class="stat-value">{{ formatCurrency(dashboardData.balance) }}</div>
+          </div>
+        </el-col>
         <template v-if="dashboardData.profitLossStats">
           <el-col :span="5"><div class="stat-card"><div class="stat-label">当前总价值</div><div class="stat-value">{{ formatCurrency(dashboardData.profitLossStats.totalMarketValue) }}</div></div></el-col>
           <el-col :span="5"><div class="stat-card"><div class="stat-label">累计总投资</div><div class="stat-value">{{ formatCurrency(dashboardData.profitLossStats.totalInvestment) }}</div></div></el-col>
@@ -76,10 +81,16 @@
 
       <el-row :gutter="20" class="charts-section">
         <el-col :span="12">
-          <el-card class="box-card"><div slot="header"><span>持仓占比 (环形图)</span></div><div ref="assetAllocationPieChart" class="chart"></div></el-card>
+          <el-card class="box-card">
+            <div slot="header"><span>持仓占比 (环形图)</span></div>
+            <div ref="assetAllocationPieChart" class="chart"></div>
+          </el-card>
         </el-col>
         <el-col :span="12">
-          <el-card class="box-card"><div slot="header"><span>资产配置 (雷达图)</span></div><div ref="assetAllocationRadarChart" class="chart"></div></el-card>
+          <el-card class="box-card">
+            <div slot="header"><span>资产配置 (雷达图)</span></div>
+            <div ref="assetAllocationRadarChart" class="chart"></div>
+          </el-card>
         </el-col>
       </el-row>
 
@@ -135,16 +146,19 @@ export default {
   name: 'UserDashboard',
   data() {
     return {
-      // 页面加载状态
+      // 页面整体加载状态
       loading: true,
+      // AI建议按钮的加载状态
       aiLoading: false,
       // 存储从后端获取的所有主页数据
       dashboardData: null,
-
-      // 个人资料模块所需的数据
+      // 控制个人资料是否处于编辑模式
       isEditing: false,
+      // 个人资料表单的数据模型
       profileForm: {},
+      // 存储原始的个人资料，用于取消编辑时恢复
       originalProfile: {},
+      // 个人资料表单的验证规则
       profileRules: {
         name: [{ required: true, message: '请输入真实姓名', trigger: 'blur' }],
         phone: [
@@ -155,50 +169,52 @@ export default {
           { required: true, message: '请输入证件号码', trigger: 'blur' },
           { validator: this.validateIdNumber, trigger: 'blur' }
         ],
-        // ... 其他规则
       }
     };
   },
 
-  // --- 【【【 使用 watch 监听器 】】】 ---
+  // 使用 watch 监听器来响应数据的变化
   watch: {
-    // 监听 dashboardData 属性的变化
+    /**
+     * @description 监听 dashboardData 属性的变化，在数据加载完成后初始化图表
+     * @param {object} newData - 新的数据
+     * @param {object} oldData - 旧的数据
+     */
     dashboardData(newData, oldData) {
       // 当 newData 不为空 (数据从后端成功返回) 且 oldData 为空 (首次加载)
       if (newData && !oldData) {
-        // 数据已经有了，Vue会去更新DOM。我们使用$nextTick确保在DOM更新后才画图。
+        // 使用$nextTick确保在DOM更新后再执行图表初始化，避免找不到图表容器
         this.$nextTick(() => {
           this.initCharts();
         });
       }
     },
-    
-    // 监听身份证号变化，自动解析出生日期和性别
+
+    /**
+     * @description 监听身份证号输入框的变化，自动解析并填充出生日期和性别
+     * @param {string} newValue - 新的身份证号
+     */
     'profileForm.idNumber': function(newValue) {
+      // 仅在编辑模式且输入为18位时触发
       if (this.isEditing && newValue && newValue.length === 18) {
         try {
-          // 提取身份证中的出生日期部分
+          // 从身份证号中提取出生日期的年、月、日
           const year = newValue.substring(6, 10);
           const month = newValue.substring(10, 12);
           const day = newValue.substring(12, 14);
           const birthDateStr = `${year}-${month}-${day}`;
-          
-          // 验证日期是否有效
+
+          // 验证提取的日期是否有效
           const date = new Date(birthDateStr);
-          if (!isNaN(date.getTime())&& date.getFullYear() > 1900 && // 大于 1900 年
-  date.getFullYear() <= new Date().getFullYear()) //() 不超过当前年份)  
-            {
-            // 设置出生日期 - 使用Date对象以适配日期选择器
+          if (!isNaN(date.getTime())&& date.getFullYear() > 1900 && date.getFullYear() <= new Date().getFullYear()) {
+            // 设置出生日期
             this.profileForm.birthDate = date;
-            
+
             // 根据身份证号第17位判断性别（奇数为男，偶数为女）
             const genderBit = parseInt(newValue.charAt(16));
             this.profileForm.gender = genderBit % 2 === 1 ? '男' : '女';
-            
-            console.log('监听器自动解析 - 出生日期:', birthDateStr);
-            console.log('监听器自动解析 - 性别:', this.profileForm.gender);
-            
-            // 提示用户已自动填充信息
+
+            // 提示用户已自动填充
             this.$message.success('已根据身份证号自动填充出生日期和性别');
           }
         } catch (error) {
@@ -208,38 +224,37 @@ export default {
     }
   },
 
+  // 计算属性
   computed: {
-    // --- 【【【 新增这个计算属性 】】】 ---
+    /**
+     * @description 根据出生日期动态计算当前年龄
+     * @returns {string|number} 返回计算出的年龄或'未知'
+     */
     userAge() {
       if (this.dashboardData && this.dashboardData.userProfile && this.dashboardData.userProfile.birthDate) {
-        // 使用 moment.js 根据出生日期计算当前年龄
+        // 使用 moment.js 计算当前日期与出生日期的年份差
         return moment().diff(this.dashboardData.userProfile.birthDate, 'years');
       }
       return '未知';
     },
-
-    // ... (其他所有 computed 属性如 formatCurrency 等保持不变) ...
   },
 
+  // created生命周期钩子，组件实例创建后立即调用
   created() {
-    // created 钩子现在只负责触发数据获取
+    // 触发数据获取
     this.fetchDashboardData();
   },
 
   methods: {
     /**
-     * 核心方法：从后端获取所有主页所需的数据
+     * @description 核心方法：从后端异步获取所有主页所需的数据
      */
     async fetchDashboardData() {
       this.loading = true;
       try {
-        // 获取数据并赋值，这将自动触发上面的 watch 监听器
+        // 调用API获取数据并赋值给dashboardData，这将自动触发watch监听器
         this.dashboardData = await getMyDashboard();
-
-        // 【重要】这里的 console.log 可以保留用于调试，也可以删掉
-        console.log("后端返回的主页原始数据:", this.dashboardData);
-
-        // 初始化个人资料表单
+        // 初始化个人资料表单，使用扩展运算符进行浅拷贝，避免直接修改原始数据
         if (this.dashboardData && this.dashboardData.userProfile) {
             this.profileForm = { ...this.dashboardData.userProfile, balance: this.dashboardData.balance };
             this.originalProfile = { ...this.profileForm };
@@ -254,15 +269,16 @@ export default {
     },
 
     /**
-     * 调用AI建议接口，并用弹窗展示结果
+     * @description 调用AI建议接口，并用弹窗展示结果
      */
     async fetchAISuggestion() {
         this.aiLoading = true;
         try {
             const suggestion = await getAISuggestion();
+            // 使用Element UI的$alert方法显示AI建议，并处理换行符
             this.$alert(suggestion.replace(/\n/g, '<br/>'), 'AI投资建议', {
                 confirmButtonText: '关闭',
-                dangerouslyUseHTMLString: true
+                dangerouslyUseHTMLString: true // 允许在内容中使用HTML
             });
         } catch (error) {
             this.$message.error('AI建议生成失败');
@@ -272,7 +288,7 @@ export default {
     },
 
     /**
-     * 初始化所有图表的总调度方法
+     * @description 初始化所有图表的总调度方法
      */
     initCharts() {
       if (!this.dashboardData) return;
@@ -281,17 +297,18 @@ export default {
     },
 
     /**
-     * 初始化持仓占比环形图
+     * @description 初始化持仓占比环形图
      */
     initAssetAllocationPieChart() {
       const chartDom = this.$refs.assetAllocationPieChart;
-      // 增加一个额外的保护，确保DOM元素存在
       if (!chartDom) return;
+      // 如果没有持仓数据，显示提示文本
       if (!this.dashboardData.assetAllocationJson || this.dashboardData.assetAllocationJson === '{}') {
         chartDom.innerHTML = '<div class="chart-empty-text">暂无持仓数据</div>';
         return;
       }
       const myChart = echarts.init(chartDom);
+      // 解析后端返回的JSON字符串为图表所需的数据格式
       const data = JSON.parse(this.dashboardData.assetAllocationJson);
       const chartData = Object.keys(data).map(key => ({ name: key, value: data[key] }));
       const option = {
@@ -300,7 +317,7 @@ export default {
         series: [{
           name: '持仓分布',
           type: 'pie',
-          radius: ['40%', '70%'],
+          radius: ['40%', '70%'], // 设置为环形图
           data: chartData,
         }]
       };
@@ -308,7 +325,7 @@ export default {
     },
 
     /**
-     * 【核心修正】初始化资产配置雷达图，动态计算坐标轴最大值
+     * @description 初始化资产配置雷达图，并动态计算坐标轴最大值
      */
     initAssetAllocationRadarChart() {
       const chartDom = this.$refs.assetAllocationRadarChart;
@@ -320,23 +337,17 @@ export default {
       const myChart = echarts.init(chartDom);
       const data = JSON.parse(this.dashboardData.assetAllocationJson);
 
-      // --- 【【【 新增逻辑：动态计算最大值 】】】 ---
-      // 1. 获取所有持仓类型的市值
+      // --- 新增逻辑：动态计算最大值 ---
       const values = Object.values(data);
       if (values.length === 0) return; // 如果没有有效数据，则不绘制
-
-      // 2. 找到其中的最大值
       const maxValue = Math.max(...values);
-
-      // 3. 将最大值向上取整到一个合适的刻度（比如向上取到最近的千位数），并增加一点缓冲
-      //    例如，如果最大值是 1001，我们会把坐标轴最大值设为 2000
+      // 将最大值向上取整到一个合适的刻度，并增加20%的缓冲
       const axisMax = Math.ceil(maxValue / 1000) * 1000 * 1.2;
-      // --- 新增逻辑结束 ---
 
       const option = {
         tooltip: { trigger: 'item' },
         radar: {
-          // --- 【【【 核心修正：使用动态计算出的 axisMax 】】】 ---
+          // 使用动态计算出的 axisMax 作为雷达图坐标轴的最大值
           indicator: Object.keys(data).map(key => ({ name: key, max: axisMax }))
         },
         series: [{
@@ -348,26 +359,37 @@ export default {
       myChart.setOption(option);
     },
 
-    // ... (其他所有方法如 toggleEdit, saveProfile, formatCurrency 等保持不变) ...
+    /**
+     * @description 切换个人资料的编辑状态
+     * @param {boolean} editing - true表示进入编辑状态，false表示退出
+     */
     toggleEdit(editing) {
       this.isEditing = editing;
+      // 如果是取消编辑，则恢复原始数据
       if (!editing) {
         this.profileForm = { ...this.originalProfile };
       }
     },
 
+    /**
+     * @description 保存更新后的个人资料
+     */
     saveProfile() {
+      // 对表单进行校验
       this.$refs.profileFormRef.validate(async (valid) => {
         if (!valid) return false;
         this.loading = true;
         try {
+          // 创建一个用于提交的副本，并删除不需要的字段
           const submissionData = { ...this.profileForm };
           delete submissionData.userId;
           delete submissionData.balance;
           delete submissionData.id;
           delete submissionData.createTime;
           delete submissionData.updateTime;
+          // 调用API更新个人资料
           const updatedProfileVO = await updateMyProfile(submissionData);
+          // 更新成功后，将返回的数据更新到表单和原始数据中
           this.profileForm = { ...updatedProfileVO, balance: this.profileForm.balance };
           this.originalProfile = { ...this.profileForm };
           this.$message.success('个人资料保存成功！');
@@ -380,78 +402,76 @@ export default {
       });
     },
 
+    /**
+     * @description 格式化货币显示
+     * @param {number} value - 金额
+     * @param {boolean} withSign - 是否带正负号
+     * @returns {string} 格式化后的字符串
+     */
     formatCurrency(value, withSign = false) {
       if (value == null || isNaN(value)) return '0.00 元';
       const sign = withSign && value > 0 ? '+' : '';
       return `${sign}${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 元`;
     },
 
+    /**
+     * @description 格式化百分比显示
+     * @param {number} value - 小数形式的百分比
+     * @returns {string} 格式化后的字符串
+     */
     formatPercentage(value) {
       if (value == null || isNaN(value)) return '0.00%';
       const sign = value > 0 ? '+' : '';
       return `${sign}${value.toFixed(2)}%`;
     },
 
+    /**
+     * @description 根据数值正负返回对应的CSS类名（用于盈亏显示）
+     * @param {number} value - 数值
+     * @returns {string} 'is-up'或'is-down'
+     */
     getProfitLossClass(value) {
       if (value == null || value === 0) return '';
       return value > 0 ? 'is-up' : 'is-down';
     },
 
-    goToHoldings() {
-      this.$router.push('/my-holdings');
-    },
-    
     /**
-     * 验证身份证号码并解析出生日期
+     * @description 身份证号码的自定义校验规则
      */
     validateIdNumber(rule, value, callback) {
       if (!value) {
         callback();
         return;
       }
-      
-      // 身份证号码格式验证（18位）
+
+      // 使用正则表达式验证身份证号码格式
       const reg = /(^\d{15}$)|(^\d{18}$)|(^\d{17}(\d|X|x)$)/;
       if (!reg.test(value)) {
         callback(new Error('请输入正确的身份证号码'));
         return;
       }
-      
-      // 解析出生日期（适用于18位身份证）
+
+      // 18位身份证号码的进一步处理
       if (value.length === 18) {
         try {
-          // 提取身份证中的出生日期部分（第7-14位）
+          // 提取出生日期
           const year = value.substring(6, 10);
           const month = value.substring(10, 12);
           const day = value.substring(12, 14);
           const birthDateStr = `${year}-${month}-${day}`;
-          
-          // 验证日期是否有效
+
           const date = new Date(birthDateStr);
           if (isNaN(date.getTime())) {
             callback(new Error('身份证号中的出生日期无效'));
             return;
           }
-          
-          // 如果正在编辑状态，自动填充出生日期
-          if (this.isEditing) {
-            this.profileForm.birthDate = date;
-            
-            // 根据身份证号第17位判断性别（奇数为男，偶数为女）
-            const genderBit = parseInt(value.charAt(16));
-            this.profileForm.gender = genderBit % 2 === 1 ? '男' : '女';
-            
-            console.log('根据身份证解析出生日期:', birthDateStr);
-            console.log('根据身份证解析性别:', this.profileForm.gender);
-          }
-          
+
           callback();
         } catch (error) {
           console.error('解析身份证出生日期出错:', error);
           callback(new Error('身份证号格式有误'));
         }
       } else {
-        // 15位身份证处理逻辑（如果需要）
         callback();
       }
     }
@@ -460,6 +480,7 @@ export default {
 </script>
 
 <style scoped>
+/* 样式部分 */
 .dashboard-container {
   padding: 20px;
 }
@@ -473,10 +494,7 @@ export default {
 .box-card {
   margin-bottom: 20px;
 }
-
-/* --- 【【【 核心修正 】】】 --- */
-
-/* 1. 顶部卡片行 Flex 布局，并拉伸等高 */
+/* 顶部卡片行 Flex 布局，并拉伸等高 */
 .top-section {
   display: flex;
   align-items: stretch;
@@ -492,8 +510,7 @@ export default {
 .top-section .el-card >>> .el-card__body {
   flex-grow: 1;
 }
-
-/* 2. 【新增】基础信息卡片顶部的 header 样式 */
+/* 基础信息卡片顶部的 header 样式 */
 .profile-header {
   display: flex;
   justify-content: space-between; /* 两端对齐 */
@@ -502,13 +519,12 @@ export default {
 }
 .profile-header .welcome-text {
   margin: 0; /* 移除 p 标签默认的上下边距 */
-  font-size: 1.1rem; /* 稍微调整字体大小 */
+  font-size: 1.1rem; /* 调整字体大小 */
 }
 .tags-container {
   flex-shrink: 0; /* 防止标签被压缩 */
 }
-
-/* 3. AI卡片内容垂直居中 */
+/* AI卡片内容垂直居中 */
 .ai-card-body {
   display: flex;
   flex-direction: column;
@@ -517,8 +533,6 @@ export default {
   text-align: center;
   height: 100%;
 }
-
-/* --- 其他样式保持不变 --- */
 .stats-section {
   margin-bottom: 20px;
 }
