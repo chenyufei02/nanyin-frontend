@@ -4,8 +4,7 @@
       <div slot="header" class="clearfix">
         <h2>我的持仓</h2>
       </div>
-      
-      <!-- 搜索区域 -->
+
       <div class="search-container">
         <el-form :inline="true" :model="searchForm" class="search-form">
           <el-form-item label="基金代码">
@@ -118,25 +117,36 @@ import { getMyHoldings } from '@/api/holding.js';
 
 export default {
   name: 'UserHolding',
+  // 组件的数据模型
   data() {
     return {
+      // 控制加载状态的显示
       loading: true,
+      // 存储从后端获取的持仓列表
       holdings: [],
+      // 汇总数据：总市值
       totalMarketValue: 0,
+      // 汇总数据：总收益
       totalProfit: 0,
+      // 汇总数据：总收益率
       totalProfitRate: 0,
+      // 绑定搜索表单的数据
       searchForm: {
         fundCode: '',
         fundName: '',
       }
     };
   },
+  // 组件创建时的生命周期钩子
   created() {
     this.fetchHoldings();
   },
   methods: {
-    // 获取持仓数据
+    /**
+     * @description 异步方法，用于从后端获取持仓数据并处理
+     */
     async fetchHoldings() {
+      // 开始加载，显示加载动画
       this.loading = true;
       try {
         // 从localStorage获取用户信息
@@ -150,116 +160,151 @@ export default {
             console.error('解析用户信息失败:', e);
           }
         }
-        
-        // 如果没有用户ID，提示用户登录
-        // if (!userId) {
-        //   this.$message.error('请先登录后再查看持仓信息');
-        //   this.$router.push('/login');
-        //   return;
-        // }
-        
+
         // 调用API获取持仓数据，传递用户ID和搜索参数
         const data = await getMyHoldings(
-          userId, 
-          this.searchForm.fundCode, 
+          userId,
+          this.searchForm.fundCode,
           this.searchForm.fundName
         );
-        
-        // 处理返回的数据
+
+        // 将API返回的数据赋值给组件的holdings属性
         this.holdings = data || [];
-        
-        // 输出最新净值字段日志
+
+        // 在控制台输出原始数据中的关键信息，用于调试
         console.log('持仓数据原始信息:', this.holdings.map(h => ({
           fundCode: h.fundCode,
           fundName: h.fundName,
           latestNetValue: h.latestNetValue
         })));
 
-        // 计算每个持仓的收益和收益率
+        // 遍历持仓列表，计算每个持仓的收益和收益率
         this.holdings.forEach(holding => {
-          // 检查市值是否需要计算
+          // 检查市值是否需要前端计算
           if (!holding.marketValue) {
-            // 如果后端没有提供市值，使用最新净值计算
+            // 如果后端未提供市值，则使用 (最新净值 * 总份额) 进行计算
             holding.marketValue = holding.latestNetValue * holding.totalShares;
             console.log(`基金${holding.fundCode}计算市值:`, holding.marketValue);
           }
 
-          // 计算收益 = 市值 - 成本价*份额
+          // 计算总成本 = 平均成本 * 总份额
           const cost = holding.averageCost * holding.totalShares;
+          // 计算单项收益 = 市值 - 总成本
           holding.profit = holding.marketValue - cost;
-          // 计算收益率 = 收益/成本
+          // 计算单项收益率 = 收益 / 总成本 (成本大于0时)
           holding.profitRate = cost > 0 ? holding.profit / cost : 0;
 
-          // 输出每个持仓的最新净值日志
+          // 在控制台输出每项持仓的关键计算数据，用于调试
           console.log(`基金${holding.fundCode}(${holding.fundName})的最新净值:`, holding.latestNetValue);
           console.log(`基金${holding.fundCode}(${holding.fundName})的市值:`, holding.marketValue);
         });
-        
-        // 计算总市值、总收益和总收益率
+
+        // 使用reduce方法计算所有持仓的总市值和总收益
         this.totalMarketValue = this.holdings.reduce((sum, item) => sum + item.marketValue, 0);
         this.totalProfit = this.holdings.reduce((sum, item) => sum + item.profit, 0);
+        // 计算总成本
         const totalCost = this.holdings.reduce((sum, item) => sum + (item.averageCost * item.totalShares), 0);
+        // 计算总收益率
         this.totalProfitRate = totalCost > 0 ? this.totalProfit / totalCost : 0;
-        
-        // 输出日志，方便调试
+
+        // 在控制台输出最终的计算结果，用于调试
         console.log('处理后的持仓数据:', this.holdings);
         console.log('总市值:', this.totalMarketValue);
         console.log('总收益:', this.totalProfit);
         console.log('总收益率:', this.totalProfitRate);
       } catch (error) {
+        // 捕获并处理API请求或计算过程中发生的错误
         console.error('获取持仓信息失败:', error);
+        // 如果是401未授权错误，提示用户登录
         if (error.response && error.response.status === 401) {
           this.$message.error('请先登录后再查看持仓信息');
-          // 401错误已在request.js中处理，会自动跳转到登录页
         } else {
+          // 其他错误，通用提示
           this.$message.error('获取持仓信息失败，请稍后再试');
         }
-        // 清空数据
+        // 出错时清空页面数据
         this.holdings = [];
         this.totalMarketValue = 0;
         this.totalProfit = 0;
         this.totalProfitRate = 0;
       } finally {
+        // 无论成功或失败，都结束加载状态
         this.loading = false;
       }
     },
-    
-    // 格式化数字
+
+    /**
+     * @description 格式化数字，保留指定小数位数
+     * @param {number} value - 需要格式化的数字
+     * @param {number} [decimals=2] - 保留的小数位数，默认为2
+     * @returns {string} 格式化后的字符串，或'N/A'
+     */
     formatNumber(value, decimals = 2) {
       if (value === undefined || value === null) return 'N/A';
       return Number(value).toFixed(decimals);
     },
-    // 格式化收益率
+
+    /**
+     * @description 格式化收益率，转换为百分比字符串
+     * @param {number} rate - 需要格式化的收益率（小数形式）
+     * @returns {string} 格式化后的百分比字符串，或'N/A'
+     */
     formatRate(rate) {
       if (rate === undefined || rate === null) return 'N/A';
       return `${(rate * 100).toFixed(2)}%`;
     },
-    // 根据收益正负获取样式类名
+
+    /**
+     * @description 根据数值正负返回对应的CSS类名
+     * @param {number} value - 数值
+     * @returns {string} 'profit-up' (正数), 'profit-down' (负数), 或 '' (零或无效值)
+     */
     getProfitClass(value) {
       if (value === undefined || value === null) return '';
       return value > 0 ? 'profit-up' : value < 0 ? 'profit-down' : '';
     },
-    // 查看基金详情
+
+    /**
+     * @description 跳转到基金详情页
+     * @param {string} fundCode - 基金代码
+     */
     viewDetails(fundCode) {
       this.$router.push(`/funds/${fundCode}`);
     },
-    // 跳转到购买页面
+
+    /**
+     * @description 跳转到基金购买页
+     * @param {string} fundCode - 基金代码
+     */
     goPurchase(fundCode) {
       this.$router.push(`/funds/${fundCode}`);
     },
-    // 跳转到赎回页面
+
+    /**
+     * @description 跳转到基金赎回页
+     * @param {string} fundCode - 基金代码
+     */
     goRedeem(fundCode) {
       this.$router.push(`/funds/${fundCode}`);
     },
-    // 跳转到基金列表
+
+    /**
+     * @description 跳转到基金超市列表页
+     */
     goToFundList() {
       this.$router.push('/funds');
     },
-    // 处理搜索
+
+    /**
+     * @description 处理搜索按钮点击事件，重新获取数据
+     */
     handleSearch() {
       this.fetchHoldings();
     },
-    // 重置搜索条件
+
+    /**
+     * @description 处理重置按钮点击事件，清空搜索条件并重新获取数据
+     */
     resetSearch() {
       this.searchForm.fundCode = '';
       this.searchForm.fundName = '';
