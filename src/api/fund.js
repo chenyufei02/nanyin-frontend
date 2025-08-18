@@ -1,4 +1,4 @@
-import request from './request'; // 引入我们配置好的axios实例
+import request from './request';
 
 /**
  * 分页并按条件搜索基金信息列表
