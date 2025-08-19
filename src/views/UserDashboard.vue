@@ -226,10 +226,7 @@ export default {
 
   // 计算属性
   computed: {
-    /**
-     * @description 根据出生日期动态计算当前年龄
-     * @returns {string|number} 返回计算出的年龄或'未知'
-     */
+    //根据出生日期动态计算当前年龄
     userAge() {
       if (this.dashboardData && this.dashboardData.userProfile && this.dashboardData.userProfile.birthDate) {
         // 使用 moment.js 计算当前日期与出生日期的年份差
@@ -246,9 +243,7 @@ export default {
   },
 
   methods: {
-    /**
-     * @description 核心方法：从后端异步获取所有主页所需的数据
-     */
+    //核心方法：从后端异步获取所有主页所需的数据
     async fetchDashboardData() {
       this.loading = true;
       try {
@@ -268,9 +263,7 @@ export default {
       }
     },
 
-    /**
-     * @description 调用AI建议接口，并用弹窗展示结果
-     */
+    // 调用AI建议接口，并用弹窗展示结果
     async fetchAISuggestion() {
         this.aiLoading = true;
         try {
