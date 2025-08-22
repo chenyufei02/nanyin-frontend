@@ -74,20 +74,11 @@
     <el-card class="box-card chart-card">
       <div slot="header" class="clearfix">
         <span><i class="el-icon-trend-charts"></i> 历史净值走势</span>
-        <!-- 日期范围选择器：用于筛选净值走势数据 -->
-        <el-date-picker
-            v-model="dateRange"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            :picker-options="pickerOptions"
-            @change="handleDateChange"
-            value-format="yyyy-MM-dd">
-        </el-date-picker>
       </div>
       <!-- 净值走势图容器 -->
-      <div id="netValueChart" style="height: 400px;"></div>
+      <div id="netValueChart" style="height: 400px;">
+        <el-empty description="历史净值走势图正在开发中....."></el-empty>
+      </div>
     </el-card>
   </div>
 
@@ -101,10 +92,9 @@
 
 // 导入第三方库
 import moment from 'moment';  // 日期处理库
-import * as echarts from 'echarts';  // 图表库
 
 // 导入API函数
-import {getFundDetail, getFundNetValueTrends} from '@/api/fund.js';
+import {getFundDetail} from '@/api/fund.js';
 
 export default {
   name: 'FundDetail',
@@ -280,14 +270,6 @@ export default {
     this.fundCode = this.$route.params.fundCode;
     // 先获取基金详情，再设置默认日期范围
     await this.fetchFundDetails();
-    // 设置默认日期范围为最近一个月
-    if (this.fundData && this.fundData.performance && this.fundData.performance.endDate) {
-      const end = moment(this.fundData.performance.endDate).toDate();
-      const start = moment(this.fundData.performance.endDate).subtract(1, 'month').toDate();
-      this.dateRange = [start, end];
-      // 获取净值走势数据
-      this.handleDateChange(this.dateRange);
-    }
   },
   methods: {
     /**
@@ -299,65 +281,15 @@ export default {
         // 调用API获取基金详情
         this.fundData = await getFundDetail(this.fundCode);
         // 在DOM更新后初始化净值图表
-        this.$nextTick(() => {
-          this.initNetValueChart();
-        });
+        // this.$nextTick(() => {
+        //   this.initNetValueChart();
+        // });
       } catch (error) {
         console.error("获取基金详情失败:", error);
         this.fundData = null;
       } finally {
         this.loading = false;
       }
-    },
-    
-    /**
-     * 初始化净值走势图表
-     * 使用ECharts绘制基金历史净值走势图
-     */
-    initNetValueChart() {
-      // 获取图表DOM元素
-      const chartDom = document.getElementById('netValueChart');
-      
-      // 检查图表容器chartDom是否存在
-      if (!chartDom) {
-        console.warn("图表容器尚未渲染，跳过本次初始化。");
-        return;
-      }
-      
-      // 检查是否有净值历史数据
-      if (!this.fundData || !this.fundData.netValueHistory || this.fundData.netValueHistory.length === 0) {
-        // 如果没有数据，显示提示信息
-        chartDom.innerHTML = '<div class="chart-empty-text">暂无历史净值数据</div>';
-        // 清除可能存在的旧图表实例
-        if (this.chartInstance) {
-          this.chartInstance.clear();
-        }
-        return;
-      }
-      
-      // 初始化ECharts实例
-      this.chartInstance = echarts.init(chartDom);
-      
-      // 准备图表数据
-      const dates = this.fundData.netValueHistory.map(item => moment(item.endDate).format('YYYY-MM-DD'));
-      const unitValues = this.fundData.netValueHistory.map(item => item.unitNetValue);
-      const accumValues = this.fundData.netValueHistory.map(item => item.accumNetValue);
-      
-      // 配置图表选项
-      const option = {
-        tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },  // 提示框配置
-        legend: { data: ['单位净值', '累计净值'] },  // 图例配置
-        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },  // 网格配置
-        xAxis: { type: 'category', boundaryGap: false, data: dates },  // X轴配置（日期）
-        yAxis: { type: 'value', scale: true, axisLabel: { formatter: '{value}' } },  // Y轴配置（净值）
-        series: [  // 数据系列配置
-          { name: '单位净值', type: 'line', smooth: true, data: unitValues },  // 单位净值曲线
-          { name: '累计净值', type: 'line', smooth: true, data: accumValues }   // 累计净值曲线
-        ]
-      };
-      
-      // 应用图表配置
-      this.chartInstance.setOption(option);
     },
     /**
      * 跳转到基金购买页面
@@ -373,142 +305,6 @@ export default {
       if (!this.fundCode) return;
       // 点击赎回按钮时，跳转到我们新配置的赎回页面路由
       this.$router.push(`/funds/${this.fundCode}/redeem`);
-    },
-
-    /**
-     * 处理日期范围变化事件
-     * 当用户选择新的日期范围时，获取该范围内的净值历史数据
-     * @param {Array} dates - 包含开始日期和结束日期的数组
-     */
-    async handleDateChange(dates) {
-      if (!dates) return;
-      try {
-        // 将日期格式转换为后端所需的格式
-        const startDate = moment(dates[0]).format('YYYY-MM-DD');
-        const endDate = moment(dates[1]).format('YYYY-MM-DD');
-        const response = await getFundNetValueTrends(this.fundCode, startDate, endDate);
-        if (response && typeof response === 'object' && response[this.fundCode]) {
-          this.updateChart(response);
-        } else {
-          console.error('净值走势数据格式不正确:', response);
-          this.$message.error('获取净值走势数据失败，数据格式不正确');
-        }
-      } catch (error) {
-        console.error('获取净值走势数据失败:', error);
-        if (error.response && error.response.status === 400) {
-          this.$message.error('日期格式不正确，请重新选择日期范围');
-        } else {
-          this.$message.error('获取净值走势数据失败，请稍后重试');
-        }
-      }
-    },
-
-    // 初始化图表
-    initChart() {
-      if (!this.chart) {
-        this.chart = echarts.init(document.getElementById('netValueChart'));
-      }
-    },
-    /**
-     * 更新图表数据
-     * @param {Object} data - 包含基金净值走势数据的对象
-     */
-    updateChart(data) {
-      // 检查数据有效性
-      if (!data || !data[this.fundCode] || !Array.isArray(data[this.fundCode]) || data[this.fundCode].length === 0) {
-        console.error('暂无净值走势数据');
-        const chartDom = document.getElementById('netValueChart');
-        if (chartDom) {
-          chartDom.innerHTML = '<div class="chart-empty-text">暂无历史净值数据</div>';
-        }
-        return;
-      }
-      // 初始化图表实例
-      this.initChart();
-      const trendData = data[this.fundCode];
-
-      // 计算净值的最大最小值，用于设置y轴范围
-      const values = trendData.map(item => item.unitNetValue);
-      const minValue = Math.min(...values);
-      const maxValue = Math.max(...values);
-      const valueRange = maxValue - minValue;
-      // 设置y轴的范围，上下各扩展20%以提高可读性
-      const yMin = minValue - valueRange * 0.2;
-      const yMax = maxValue + valueRange * 0.2;
-
-      // 配置图表选项
-      const option = {
-        // 提示框配置
-        tooltip: {
-          trigger: 'axis',  // 触发类型：坐标轴触发
-          formatter: function(params) {
-            const data = params[0].data;
-            return `日期：${moment(data[0]).format('YYYY-MM-DD')}<br/>净值：${data[1].toFixed(4)}`;
-          }
-        },
-        // X轴配置（时间）
-        xAxis: {
-          type: 'time',  // 时间类型坐标轴
-          boundaryGap: false,  // 坐标轴两边不留白
-          axisLabel: {
-            formatter: function(value) {
-              return moment(value).format('MM-DD');  // 只显示月-日
-            }
-          }
-        },
-        // Y轴配置（净值）
-        yAxis: {
-          type: 'value',
-          name: '单位净值',  // 坐标轴名称
-          min: yMin,  // Y轴最小值
-          max: yMax,  // Y轴最大值
-          splitLine: {
-            show: true,
-            lineStyle: {
-              type: 'dashed'  // 网格线样式：虚线
-            }
-          },
-          axisLabel: {
-             formatter: function(value) {
-               return value.toFixed(4);  // 格式化为4位小数
-             }
-           }
-        },
-        // 数据系列配置
-        series: [{
-          name: '单位净值',
-          type: 'line',  // 图表类型：线图
-          data: trendData.map(item => [item.date, item.unitNetValue]),  // 数据格式：[日期, 净值]
-          symbol: 'circle',
-          symbolSize: 6,  // 标记的大小
-          lineStyle: {
-            width: 2,
-            color: '#409EFF'
-          },
-          itemStyle: {
-            color: '#409EFF'
-          },
-          // 区域填充样式
-          areaStyle: {
-            color: {
-              type: 'linear',
-              x: 0,
-              y: 0,
-              x2: 0,
-              y2: 1,
-              colorStops: [{
-                offset: 0,
-                color: 'rgba(64,158,255,0.3)'
-              }, {
-                offset: 1,
-                color: 'rgba(64,158,255,0)'
-              }]
-            }
-          }
-        }]
-      };
-      // 应用图表配置
-      this.chart.setOption(option);
     },
     /**
      * 处理窗口大小变化事件
