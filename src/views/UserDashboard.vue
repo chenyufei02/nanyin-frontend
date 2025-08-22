@@ -1,3 +1,4 @@
+<!--suppress ALL -->
 <template>
   <div class="dashboard-container" v-loading="loading">
     <div v-if="!loading && dashboardData">
@@ -79,21 +80,6 @@
         </el-col>
       </el-row>
 
-      <el-row :gutter="20" class="charts-section">
-        <el-col :span="12">
-          <el-card class="box-card">
-            <div slot="header"><span>持仓占比 (环形图)</span></div>
-            <div ref="assetAllocationPieChart" class="chart"></div>
-          </el-card>
-        </el-col>
-        <el-col :span="12">
-          <el-card class="box-card">
-            <div slot="header"><span>资产配置 (雷达图)</span></div>
-            <div ref="assetAllocationRadarChart" class="chart"></div>
-          </el-card>
-        </el-col>
-      </el-row>
-
       <el-card class="box-card profile-section">
         <div slot="header" class="clearfix">
             <span><i class="el-icon-document"></i> 个人资料</span>
@@ -138,10 +124,9 @@
 
 <script>
 // 导入所有需要的API函数和库
-import { getMyDashboard, getAISuggestion, updateMyProfile } from '@/api/user.js';
-import * as echarts from 'echarts';
-import moment from "moment";
 
+import moment from "moment";
+import { getMyDashboard, updateMyProfile } from '@/api/user.js';
 export default {
   name: 'UserDashboard',
   data() {
@@ -175,20 +160,6 @@ export default {
 
   // 使用 watch 监听器来响应数据的变化
   watch: {
-    /**
-     * @description 监听 dashboardData 属性的变化，在数据加载完成后初始化图表
-     * @param {object} newData - 新的数据
-     * @param {object} oldData - 旧的数据
-     */
-    dashboardData(newData, oldData) {
-      // 当 newData 不为空 (数据从后端成功返回) 且 oldData 为空 (首次加载)
-      if (newData && !oldData) {
-        // 使用$nextTick确保在DOM更新后再执行图表初始化，避免找不到图表容器
-        this.$nextTick(() => {
-          this.initCharts();
-        });
-      }
-    },
 
     /**
      * @description 监听身份证号输入框的变化，自动解析并填充出生日期和性别
@@ -265,91 +236,7 @@ export default {
 
     // 调用AI建议接口，并用弹窗展示结果
     async fetchAISuggestion() {
-        this.aiLoading = true;
-        try {
-            const suggestion = await getAISuggestion();
-            // 使用Element UI的$alert方法显示AI建议，并处理换行符
-            this.$alert(suggestion.replace(/\n/g, '<br/>'), 'AI投资建议', {
-                confirmButtonText: '关闭',
-                dangerouslyUseHTMLString: true // 允许在内容中使用HTML
-            });
-        } catch (error) {
-            this.$message.error('AI建议生成失败');
-        } finally {
-            this.aiLoading = false;
-        }
-    },
-
-    /**
-     * @description 初始化所有图表的总调度方法
-     */
-    initCharts() {
-      if (!this.dashboardData) return;
-      this.initAssetAllocationPieChart();
-      this.initAssetAllocationRadarChart();
-    },
-
-    /**
-     * @description 初始化持仓占比环形图
-     */
-    initAssetAllocationPieChart() {
-      const chartDom = this.$refs.assetAllocationPieChart;
-      if (!chartDom) return;
-      // 如果没有持仓数据，显示提示文本
-      if (!this.dashboardData.assetAllocationJson || this.dashboardData.assetAllocationJson === '{}') {
-        chartDom.innerHTML = '<div class="chart-empty-text">暂无持仓数据</div>';
-        return;
-      }
-      const myChart = echarts.init(chartDom);
-      // 解析后端返回的JSON字符串为图表所需的数据格式
-      const data = JSON.parse(this.dashboardData.assetAllocationJson);
-      const chartData = Object.keys(data).map(key => ({ name: key, value: data[key] }));
-      const option = {
-        tooltip: { trigger: 'item', formatter: '{a} <br/>{b} : {c}元 ({d}%)' },
-        legend: { top: 'bottom' },
-        series: [{
-          name: '持仓分布',
-          type: 'pie',
-          radius: ['40%', '70%'], // 设置为环形图
-          data: chartData,
-        }]
-      };
-      myChart.setOption(option);
-    },
-
-    /**
-     * @description 初始化资产配置雷达图，并动态计算坐标轴最大值
-     */
-    initAssetAllocationRadarChart() {
-      const chartDom = this.$refs.assetAllocationRadarChart;
-      if (!chartDom) return;
-      if (!this.dashboardData.assetAllocationJson || this.dashboardData.assetAllocationJson === '{}') {
-          chartDom.innerHTML = '<div class="chart-empty-text">暂无持仓数据</div>';
-          return;
-      }
-      const myChart = echarts.init(chartDom);
-      const data = JSON.parse(this.dashboardData.assetAllocationJson);
-
-      // --- 新增逻辑：动态计算最大值 ---
-      const values = Object.values(data);
-      if (values.length === 0) return; // 如果没有有效数据，则不绘制
-      const maxValue = Math.max(...values);
-      // 将最大值向上取整到一个合适的刻度，并增加20%的缓冲
-      const axisMax = Math.ceil(maxValue / 1000) * 1000 * 1.2;
-
-      const option = {
-        tooltip: { trigger: 'item' },
-        radar: {
-          // 使用动态计算出的 axisMax 作为雷达图坐标轴的最大值
-          indicator: Object.keys(data).map(key => ({ name: key, max: axisMax }))
-        },
-        series: [{
-            name: '资产配置',
-            type: 'radar',
-            data: [{ value: Object.values(data), name: '市值(元)' }]
-        }]
-      };
-      myChart.setOption(option);
+      this.$message.info('AI投资建议功能正在开发中，敬请期待！');
     },
 
     /**
