@@ -38,6 +38,10 @@
           <el-input v-model="form.shares" placeholder="请输入要赎回的份额">
              <template slot="append">份</template>
           </el-input>
+          <!-- 全部赎回按钮 -->
+          <div style="margin-top: 8px;">
+            <el-button size="small" type="text" @click="redeemAll">全部赎回</el-button>
+          </div>
         </el-form-item>
 
         <!-- 操作按钮组 -->
@@ -71,9 +75,9 @@ export default {
       if (!value || String(value).trim() === '') {
         return callback(new Error('请输入赎回份额'));
       }
-      // 检查份额格式（支持最多两位小数）
-      if (!/^\d+(\.\d{1,2})?$/.test(value)) {
-        return callback(new Error('请输入有效的数字格式，最多两位小数'));
+      // 检查份额格式（支持最多四位小数）
+      if (!/^\d+(\.\d{1,4})?$/.test(value)) {
+        return callback(new Error('请输入有效的数字格式（最多四位小数）'));
       }
       const numericValue = parseFloat(value);
       // 检查份额是否大于0
@@ -217,6 +221,19 @@ export default {
           this.submitting = false;
         }
       });
+    },
+    
+    // 全部赎回方法
+    redeemAll() {
+      if (this.currentHoldingShares > 0) {
+        // 将当前持有份额填入赎回份额输入框，保留4位小数
+        this.form.shares = this.currentHoldingShares.toFixed(4);
+        // 清除该字段的验证错误
+        this.$refs.redeemForm.clearValidate('shares');
+        this.$message.success('已自动填入全部持有份额');
+      } else {
+        this.$message.warning('当前没有持有份额可以赎回');
+      }
     }
   }
 };
