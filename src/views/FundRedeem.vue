@@ -18,10 +18,9 @@
         <el-form-item label="基金名称">
           <el-input v-model="form.fundName" disabled></el-input>
         </el-form-item>
-        <!-- 收款银行卡显示（只读，自动获取） -->
+        <!-- 银行卡号显示 -->
         <el-form-item label="交易银行卡号">
-          <el-input v-model="form.bankCardNo" disabled>
-          </el-input>
+          <el-input v-model="form.bankCardNo" disabled></el-input>
         </el-form-item>
         <!-- 当前持有份额显示（只读） -->
         <el-form-item label="当前持有份额">
@@ -120,15 +119,27 @@ export default {
       this.loading = true;
       try {
         // 并行获取基金详情和持仓信息
-        const [fundDetail, allHoldings] = await Promise.all([
+        const [fundDetail, holdingsResponse] = await Promise.all([
           getFundDetail(fundCode),
-          getMyHoldings()
+          getMyHoldings() // 如果需要userId，从store或其他地方获取
         ]);
         
         // 设置基金信息
         this.fund = fundDetail;
         this.form.fundCode = this.fund?.basicInfo?.fundCode || fundCode;
         this.form.fundName = this.fund?.basicInfo?.fundName || '';
+    
+        // 处理持仓数据 - 检查返回的数据结构
+        let allHoldings = [];
+        if (holdingsResponse && Array.isArray(holdingsResponse)) {
+          allHoldings = holdingsResponse;
+        } else if (holdingsResponse && holdingsResponse.records && Array.isArray(holdingsResponse.records)) {
+          // 如果是分页数据结构
+          allHoldings = holdingsResponse.records;
+        } else if (holdingsResponse && holdingsResponse.data && Array.isArray(holdingsResponse.data)) {
+          // 如果数据在data字段中
+          allHoldings = holdingsResponse.data;
+        }
     
         // 查找当前基金的持仓信息
         const currentHolding = allHoldings.find(h => h.fundCode === fundCode);
