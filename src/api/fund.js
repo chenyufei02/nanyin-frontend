@@ -28,17 +28,17 @@ export function getFundDetail(fundCode) {
   });
 }
 
-/**
- * 获取当前用户的基金持仓信息
- * 对应后端的接口 /api/holding/my-holdings
- * @returns Promise
- */
-export function getMyHoldings() {
-  return request({
-    url: '/holding/my-holdings',
-    method: 'get'
-  });
-}
+// /**
+//  * 获取当前用户的基金持仓信息
+//  * 对应后端的接口 /api/holding/my-holdings
+//  * @returns Promise
+//  */
+// export function getMyHoldings() {
+//   return request({
+//     url: '/holding/my-holdings',
+//     method: 'get'
+//   });
+// }
 
 /**
  * 获取基金净值走势数据
