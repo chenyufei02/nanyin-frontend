@@ -31,10 +31,10 @@
 
       <div v-else>
         <el-table
-          :data="holdings"
-          style="width: 100%"
-          border
-          stripe
+            :data="holdings"
+            style="width: 100%"
+            border
+            stripe
         >
           <el-table-column prop="fundCode" label="基金代码" width="120" align="center" />
           <el-table-column prop="fundName" label="基金名称" min-width="180" />
@@ -106,6 +106,19 @@
             </el-col>
           </el-row>
         </div>
+        
+        <!-- 分页组件 -->
+        <div class="pagination-container">
+          <el-pagination
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+            :current-page="currentPage"
+            :page-sizes="[5, 10, 20, 50]"
+            :page-size="pageSize"
+            layout="total, sizes, prev, pager, next, jumper"
+            :total="total">
+          </el-pagination>
+        </div>
       </div>
     </el-card>
   </div>
@@ -113,7 +126,7 @@
 
 <script>
 // 导入获取持仓信息的API函数
-import { getMyHoldings } from '@/api/holding.js';
+import { getMyHoldings, getAllMyHoldings } from '@/api/holding';
 
 export default {
   name: 'UserHolding',
@@ -134,7 +147,11 @@ export default {
       searchForm: {
         fundCode: '',
         fundName: '',
-      }
+      },
+      // 分页相关数据
+      currentPage: 1,      // 当前页码
+      pageSize: 10,        // 每页显示条数
+      total: 0             // 总记录数
     };
   },
   // 组件创建时的生命周期钩子
@@ -161,15 +178,71 @@ export default {
           }
         }
 
-        // 调用API获取持仓数据，传递用户ID和搜索参数
-        const data = await getMyHoldings(
-          userId,
-          this.searchForm.fundCode,
-          this.searchForm.fundName
-        );
+        console.log(`正在获取第${this.currentPage}页数据，每页${this.pageSize}条记录`);
 
-        // 将API返回的数据赋值给组件的holdings属性
-        this.holdings = data || [];
+        // 同时发起两个请求：获取分页数据和所有持仓数据（用于计算总计值）
+        const [response, allHoldingsResponse] = await Promise.all([
+          // 获取分页数据
+          getMyHoldings(
+            userId,
+            this.searchForm.fundCode,
+            this.searchForm.fundName,
+            this.currentPage,
+            this.pageSize
+          ),
+          // 获取所有持仓数据（用于计算总计值）
+          getAllMyHoldings(userId)
+        ]);
+
+        console.log('API返回的原始数据:', response);
+        // 详细记录API返回的数据结构
+        if (response) {
+          console.log('API返回数据类型:', typeof response);
+          console.log('API返回数据是否为数组:', Array.isArray(response));
+          if (typeof response === 'object' && !Array.isArray(response)) {
+            console.log('API返回的对象属性:', Object.keys(response));
+            if (response.records) {
+              console.log('records字段类型:', typeof response.records);
+              console.log('records是否为数组:', Array.isArray(response.records));
+              console.log('records长度:', response.records.length);
+              console.log('total值:', response.total);
+            } else if (response.content) {
+              console.log('content字段类型:', typeof response.content);
+              console.log('content是否为数组:', Array.isArray(response.content));
+              console.log('content长度:', response.content.length);
+              console.log('totalElements值:', response.totalElements);
+            }
+          }
+        }
+
+        // 处理返回的数据，兼容分页格式
+        let holdingsData = [];
+        
+        // 检查返回数据的格式，适配分页结构
+        if (response && response.records) {
+          // 新的分页格式，包含records和total
+          holdingsData = response.records;
+          this.total = response.total || 0;
+          console.log(`总记录数: ${this.total}`);
+        } else if (response && response.content) {
+          // 旧的分页格式，包含content和totalElements
+          holdingsData = response.content;
+          this.total = response.totalElements || 0;
+          console.log(`总记录数(旧格式): ${this.total}`);
+        } else if (Array.isArray(response)) {
+          // 旧的数组格式，直接使用
+          holdingsData = response;
+          this.total = response.length;
+          console.log('使用旧格式数据，数组长度作为总记录数');
+        } else {
+          // 其他情况，使用空数组
+          holdingsData = [];
+          this.total = 0;
+          console.log('未识别的数据格式，使用空数组');
+        }
+
+        // 将处理后的数据赋值给组件的holdings属性
+        this.holdings = holdingsData || [];
 
         // 在控制台输出原始数据中的关键信息，用于调试
         console.log('持仓数据原始信息:', this.holdings.map(h => ({
@@ -199,25 +272,63 @@ export default {
           console.log(`基金${holding.fundCode}(${holding.fundName})的市值:`, holding.marketValue);
         });
 
-        // 使用reduce方法计算所有持仓的总市值和总收益
-        this.totalMarketValue = this.holdings.reduce((sum, item) => sum + item.marketValue, 0);
-        this.totalProfit = this.holdings.reduce((sum, item) => sum + item.profit, 0);
+        // 处理所有持仓数据，用于计算总计值
+        let allHoldings = [];
+        
+        // 检查所有持仓数据的格式
+        if (allHoldingsResponse && Array.isArray(allHoldingsResponse)) {
+          // 直接是数组格式
+          allHoldings = allHoldingsResponse;
+        } else if (allHoldingsResponse && allHoldingsResponse.records && Array.isArray(allHoldingsResponse.records)) {
+          // 包含records字段
+          allHoldings = allHoldingsResponse.records;
+        } else if (allHoldingsResponse && allHoldingsResponse.content && Array.isArray(allHoldingsResponse.content)) {
+          // 包含content字段
+          allHoldings = allHoldingsResponse.content;
+        } else {
+          // 其他情况，使用空数组
+          allHoldings = [];
+          console.log('未能获取所有持仓数据，总计值可能不准确');
+        }
+
+        console.log('获取到所有持仓数据数量:', allHoldings.length);
+
+        // 处理所有持仓数据的计算
+        allHoldings.forEach(holding => {
+          // 检查市值是否需要前端计算
+          if (!holding.marketValue) {
+            holding.marketValue = holding.latestNetValue * holding.totalShares;
+          }
+          // 计算总成本和收益
+          const cost = holding.averageCost * holding.totalShares;
+          holding.profit = holding.marketValue - cost;
+          holding.profitRate = cost > 0 ? holding.profit / cost : 0;
+        });
+
+        // 使用所有持仓数据计算总计值
+        this.totalMarketValue = allHoldings.reduce((sum, item) => sum + item.marketValue, 0);
+        this.totalProfit = allHoldings.reduce((sum, item) => sum + item.profit, 0);
         // 计算总成本
-        const totalCost = this.holdings.reduce((sum, item) => sum + (item.averageCost * item.totalShares), 0);
+        const totalCost = allHoldings.reduce((sum, item) => sum + (item.averageCost * item.totalShares), 0);
         // 计算总收益率
         this.totalProfitRate = totalCost > 0 ? this.totalProfit / totalCost : 0;
 
         // 在控制台输出最终的计算结果，用于调试
-        console.log('处理后的持仓数据:', this.holdings);
-        console.log('总市值:', this.totalMarketValue);
-        console.log('总收益:', this.totalProfit);
-        console.log('总收益率:', this.totalProfitRate);
+        console.log('当前页持仓数据:', this.holdings);
+        console.log('所有持仓数据:', allHoldings);
+        console.log('总市值(所有持仓):', this.totalMarketValue);
+        console.log('总收益(所有持仓):', this.totalProfit);
+        console.log('总收益率(所有持仓):', this.totalProfitRate);
       } catch (error) {
         // 捕获并处理API请求或计算过程中发生的错误
         console.error('获取持仓信息失败:', error);
         // 如果是401未授权错误，提示用户登录
         if (error.response && error.response.status === 401) {
           this.$message.error('请先登录后再查看持仓信息');
+          // 未登录时重定向到登录页面
+          this.$router.push('/login');
+        } else if (error.response && error.response.status === 403) {
+          this.$message.error('您没有权限查看此信息');
         } else {
           // 其他错误，通用提示
           this.$message.error('获取持仓信息失败，请稍后再试');
@@ -227,6 +338,7 @@ export default {
         this.totalMarketValue = 0;
         this.totalProfit = 0;
         this.totalProfitRate = 0;
+        this.total = 0; // 清空总记录数
       } finally {
         // 无论成功或失败，都结束加载状态
         this.loading = false;
@@ -308,6 +420,27 @@ export default {
     resetSearch() {
       this.searchForm.fundCode = '';
       this.searchForm.fundName = '';
+      this.currentPage = 1; // 重置为第一页
+      this.fetchHoldings();
+    },
+    
+    /**
+     * @description 处理每页显示数量变化事件
+     * @param {number} size - 新的每页显示数量
+     */
+    handleSizeChange(size) {
+      console.log(`每页显示数量变更为: ${size}`);
+      this.pageSize = size;
+      this.fetchHoldings();
+    },
+    
+    /**
+     * @description 处理页码变化事件
+     * @param {number} page - 新的页码
+     */
+    handleCurrentChange(page) {
+      console.log(`当前页码变更为: ${page}`);
+      this.currentPage = page;
       this.fetchHoldings();
     }
   }
@@ -360,5 +493,12 @@ export default {
 }
 .search-form .el-form-item {
   margin-bottom: 0;
+}
+
+/* 分页容器样式 */
+.pagination-container {
+  margin-top: 20px;
+  text-align: center;
+  padding: 10px 0;
 }
 </style>
