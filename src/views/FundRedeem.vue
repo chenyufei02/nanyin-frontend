@@ -18,14 +18,10 @@
         <el-form-item label="基金名称">
           <el-input v-model="form.fundName" disabled></el-input>
         </el-form-item>
-        <!-- 收款银行卡号输入框（带验证） -->
-        <el-form-item label="收款银行卡号" prop="bankCardNo">
-          <el-input
-            v-model="form.bankCardNo"
-            placeholder="请输入收款银行卡号"
-            maxlength="19"
-            @input="onBankCardInput"
-          ></el-input>
+        <!-- 收款银行卡显示（只读，自动获取） -->
+        <el-form-item label="交易银行卡号">
+          <el-input v-model="form.bankCardNo" disabled>
+          </el-input>
         </el-form-item>
         <!-- 当前持有份额显示（只读） -->
         <el-form-item label="当前持有份额">
@@ -61,10 +57,11 @@
 <script>
 // 导入基金相关API
 import { getFundDetail } from '@/api/fund.js';
-// 导入用户赎回API
 import { redeemFund } from '@/api/user.js';
 // 导入持仓相关API
 import { getMyHoldings } from '@/api/holding.js';
+// 导入银行卡信息API
+import { getBankAccountInfo } from '@/api/transaction.js';
 
 export default {
   name: 'FundRedeem',
@@ -90,23 +87,7 @@ export default {
       }
       callback();
     };
-
-    // 银行卡号Luhn算法校验器（与购买页面一致）
-    const validateBankCard = (rule, value, callback) => {
-      if (!value) {
-        return callback(new Error('请输入银行卡号'));
-      }
-      // 检查银行卡号长度和格式
-      if (!/^\d{10,19}$/.test(value)) {
-        return callback(new Error('银行卡号需为10-19位数字'));
-      }
-      // 使用Luhn算法验证银行卡号
-      if (!this.luhnCheck(value)) {
-        return callback(new Error('银行卡号不合法，请检查后重试'));
-      }
-      callback();
-    };
-
+  
     return {
       loading: true,              // 页面加载状态
       submitting: false,          // 表单提交状态
@@ -117,16 +98,14 @@ export default {
         fundCode: '',            // 基金代码
         fundName: '',            // 基金名称
         shares: '',              // 赎回份额
-        bankCardNo: ''           // 收款银行卡号
+        bankCardNo: ''           // 银行卡号（只显示，不校验）
       },
-      // 表单验证规则
+      // 表单验证规则（银行卡号不需要验证）
       rules: {
         shares: [
           { required: true, validator: validateShares, trigger: 'blur' }
-        ],
-        bankCardNo: [
-          { required: true, validator: validateBankCard, trigger: 'blur' }
         ]
+        // 银行卡号不需要验证规则，只用于显示
       }
     };
   },
@@ -136,44 +115,21 @@ export default {
     this.init(fundCode);
   },
   methods: {
-    // 银行卡号输入处理 - 只允许数字输入
-    onBankCardInput(value) {
-      const digitsOnly = String(value || '').replace(/\D+/g, '');
-      this.form.bankCardNo = digitsOnly.slice(0, 19);
-    },
-    // Luhn算法校验银行卡号有效性
-    luhnCheck(numberString) {
-      const digits = (numberString || '').split('').reverse().map(d => parseInt(d, 10));
-      let sum = 0;
-      for (let i = 0; i < digits.length; i++) {
-        let digit = digits[i];
-        // 偶数位置数字乘以2
-        if (i % 2 === 1) {
-          digit *= 2;
-          // 如果结果大于9，减去9
-          if (digit > 9) digit -= 9;
-        }
-        sum += digit;
-      }
-      // 总和能被10整除则有效
-      return sum % 10 === 0;
-    },
-
     // 初始化页面数据
     async init(fundCode) {
       this.loading = true;
       try {
-        // 并行获取基金详情和用户持仓信息
+        // 并行获取基金详情和持仓信息
         const [fundDetail, allHoldings] = await Promise.all([
           getFundDetail(fundCode),
           getMyHoldings()
         ]);
-
+        
         // 设置基金信息
         this.fund = fundDetail;
         this.form.fundCode = this.fund?.basicInfo?.fundCode || fundCode;
         this.form.fundName = this.fund?.basicInfo?.fundName || '';
-
+    
         // 查找当前基金的持仓信息
         const currentHolding = allHoldings.find(h => h.fundCode === fundCode);
         if (currentHolding) {
@@ -181,6 +137,10 @@ export default {
         } else {
           this.currentHoldingShares = 0;
         }
+    
+        // 获取银行卡信息用于显示
+        await this.loadBankAccountInfo(fundCode);
+        
       } catch (e) {
         this.$message.error('加载页面信息失败');
         console.error("初始化赎回页面失败:", e);
@@ -188,21 +148,38 @@ export default {
         this.loading = false;
       }
     },
+    
+    // 获取银行卡信息（使用新的API）
+    async loadBankAccountInfo(fundCode) {
+      try {
+        const bankAccountData = await getBankAccountInfo(fundCode);
+        if (bankAccountData && bankAccountData.bankAccountNumber) {
+          this.form.bankCardNo = bankAccountData.bankAccountNumber;
+        } else {
+          this.form.bankCardNo = '未找到银行卡信息';
+          console.warn('未找到银行卡信息');
+        }
+      } catch (error) {
+        console.warn('获取银行卡信息失败:', error);
+        this.form.bankCardNo = '获取银行卡信息失败';
+      }
+    },
+
     // 返回基金详情页
     goBack() {
       this.$router.push(`/funds/${this.form.fundCode}`);
     },
+
     // 处理赎回提交
     handleSubmit() {
       // 验证表单
       this.$refs.redeemForm.validate(async valid => {
         if (!valid) return;
 
-        // 构建赎回请求数据
+        // 构建赎回请求数据（不需要传递银行卡号，后端会自动处理）
         const payload = {
           fundCode: this.form.fundCode,
           transactionShares: this.form.shares,
-          bank_account_number: this.form.bankCardNo, // 收款银行卡号
           transactionTime: new Date().toISOString()
         };
 
