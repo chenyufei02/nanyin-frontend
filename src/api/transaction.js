@@ -24,3 +24,17 @@ export function getTransactionById(transactionId) {
     method: 'get'
   });
 }
+
+/**
+ * 获取指定基金的银行卡信息
+ * 对应后端接口 /api/transaction/bank-account/{fundCode}
+ * @param {string} fundCode - 基金代码
+ * @returns Promise
+ */
+// getBankAccountInfo 函数已经存在
+export function getBankAccountInfo(fundCode) {
+  return request({
+    url: `/transaction/bank-account/${fundCode}`,
+    method: 'get'
+  });
+}
